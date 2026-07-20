@@ -1,41 +1,42 @@
-# dependencies (bun install)
-node_modules
+# Dependências
+node_modules/
 
-# output
-out
-dist
-*.tgz
-
-# code coverage
-coverage
-*.lcov
-
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
-
-# dotenv environment variable files
+# Variáveis de Ambiente e Segredos (NUNCA subir para o GitHub!)
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*
+!.env.example
+*.json
+!package.json
+!tsconfig.json
+!package-lock.json
 
-# caches
-.eslintcache
-.cache
+# Segredos e Chaves do GCP / Service Accounts
+*.key
+*.pem
+*.p12
+secretaria-fran-hair-*.json
+
+# Logs e Caches
+*.log
+logs/
+.cache/
 *.tsbuildinfo
+.eslintcache
 
-# IntelliJ based IDEs
-.idea
+# Build e Output
+dist/
+out/
+build/
+coverage/
 
-# Finder (MacOS) folder config
+# Arquivos de Sistema e IDEs
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
 
-# Generated
-*.png
-bun.lock
-
+# Arquivos temporários e testes locais
+scratch/
 *.local.md
-.mcp.json
+C:*
+*.claudeplans*

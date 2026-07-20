@@ -10,6 +10,16 @@ const obrigatorias = [
   "CHATWOOT_ALERT_INBOX_ID",
   "CHATWOOT_ALERT_CONVERSATION_ID",
   "PROFISSIONAIS_CALENDAR_IDS",
+  "NOME_NEGOCIO",
+  "NOME_ASSISTENTE",
+  "RAMO_NEGOCIO",
+  "HORARIO_FUNCIONAMENTO",
+  "ENDERECO",
+  "TELEFONE",
+  "FORMAS_PAGAMENTO",
+  "CONVENIOS",
+  "PROFISSIONAIS",
+  "PROCEDIMENTOS",
 ] as const;
 
 for (const variavel of obrigatorias) {
@@ -19,7 +29,7 @@ for (const variavel of obrigatorias) {
 }
 
 export const env = {
-  PORT: Number(process.env["PORT"] ?? "3000"),
+  PORT: Number(process.env["PORT"] ?? "3020"),
   DATABASE_URL: process.env["DATABASE_URL"]!,
 
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"]!,
@@ -47,4 +57,16 @@ export const env = {
   LANGFUSE_SECRET_KEY: process.env["LANGFUSE_SECRET_KEY"] ?? "",
   LANGFUSE_PUBLIC_KEY: process.env["LANGFUSE_PUBLIC_KEY"] ?? "",
   LANGFUSE_BASEURL: process.env["LANGFUSE_BASEURL"] ?? "https://cloud.langfuse.com",
+
+  PROFISSIONAIS_CALENDAR_IDS: process.env["PROFISSIONAIS_CALENDAR_IDS"]!,
+  NOME_NEGOCIO: process.env["NOME_NEGOCIO"]!,
+  NOME_ASSISTENTE: process.env["NOME_ASSISTENTE"]!,
+  RAMO_NEGOCIO: process.env["RAMO_NEGOCIO"]!,
+  HORARIO_FUNCIONAMENTO: process.env["HORARIO_FUNCIONAMENTO"]!,
+  ENDERECO: process.env["ENDERECO"]!,
+  TELEFONE: process.env["TELEFONE"]!,
+  FORMAS_PAGAMENTO: process.env["FORMAS_PAGAMENTO"]!,
+  CONVENIOS: process.env["CONVENIOS"]!,
+  PROFISSIONAIS: process.env["PROFISSIONAIS"]!,
+  PROCEDIMENTOS: process.env["PROCEDIMENTOS"]!,
 } as const;

@@ -9,13 +9,17 @@ function log(level: LogLevel, tag: string, message: string, data?: unknown) {
     else if (level === "warn") console.warn(prefix, message, ...(data !== undefined ? [data] : []));
     else console.log(prefix, message, ...(data !== undefined ? [data] : []));
   } else {
+    let serializedData = data;
+    if (data instanceof Error) {
+      serializedData = { message: data.message, stack: data.stack };
+    }
     const entry: Record<string, unknown> = {
       ts: new Date().toISOString(),
       level,
       tag,
       msg: message,
     };
-    if (data !== undefined) entry["data"] = data;
+    if (serializedData !== undefined) entry["data"] = serializedData;
     const line = JSON.stringify(entry);
     if (level === "error") console.error(line);
     else if (level === "warn") console.warn(line);

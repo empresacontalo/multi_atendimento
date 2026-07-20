@@ -89,25 +89,27 @@ export async function processarMensagem(payload: ChatwootWebhookPayload): Promis
   const idMensagemReferenciada = payload.content_attributes?.in_reply_to?.toString() ?? null;
 
   return {
-    idMensagem: payload.id.toString(),
+    idMensagem: payload.id?.toString() ?? Date.now().toString(),
     idMensagemReferenciada,
-    idConta: payload.account.id.toString(),
-    idConversa: payload.conversation.id.toString(),
-    idContato: (payload.conversation.contact_inbox?.contact_id ?? payload.sender.id).toString(),
-    idInbox: payload.conversation.inbox_id.toString(),
+    idConta: (payload.account?.id ?? 1).toString(),
+    idConversa: (payload.conversation?.id ?? 1).toString(),
+    idContato: (payload.conversation?.contact_inbox?.contact_id ?? payload.sender?.id ?? 1).toString(),
+    idInbox: (payload.conversation?.inbox_id ?? 1).toString(),
     telefone,
-    nome: payload.sender.name,
+    nome: payload.sender?.name ?? "Cliente",
     mensagem,
     mensagemProcessada,
     mensagemDeAudio,
-    timestamp: typeof payload.created_at === "number"
-      ? new Date(payload.created_at * 1000).toISOString()
-      : new Date(payload.created_at).toISOString(),
+    timestamp: payload.created_at
+      ? (typeof payload.created_at === "number"
+          ? new Date(payload.created_at * 1000).toISOString()
+          : new Date(payload.created_at).toISOString())
+      : new Date().toISOString(),
     tipoArquivo,
     idAnexo,
     urlArquivo,
-    etiquetas: payload.conversation.labels,
-    atributosContato: payload.sender.custom_attributes ?? {},
-    atributosConversa: JSON.stringify(payload.conversation.custom_attributes ?? {}),
+    etiquetas: payload.conversation?.labels ?? [],
+    atributosContato: payload.sender?.custom_attributes ?? {},
+    atributosConversa: JSON.stringify(payload.conversation?.custom_attributes ?? {}),
   };
 }

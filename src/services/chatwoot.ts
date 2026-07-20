@@ -9,6 +9,7 @@ const TOKEN = env.CHATWOOT_API_TOKEN;
 function headers() {
   return {
     "Content-Type": "application/json",
+    "api-access-token": TOKEN,
     api_access_token: TOKEN,
   };
 }

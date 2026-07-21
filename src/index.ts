@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { env } from "./config/env.ts";
 import { pool } from "./db/pool.ts";
+import { criarTabelas } from "./db/setup.ts";
 import { encerrarCheckpointer } from "./db/checkpointer.ts";
 import { logger } from "./lib/logger.ts";
 import { healthRouter } from "./routes/health.ts";
@@ -9,6 +10,9 @@ import { setupRouter } from "./routes/setup.ts";
 import { webhookRouter } from "./routes/webhook.ts";
 import { followupRouter } from "./routes/followup.ts";
 import { asaasWebhookRouter } from "./routes/asaas-webhook.ts";
+
+// Garante que todas as tabelas (incluindo n8n_agendamentos_pendentes) existam no Postgres ao iniciar
+await criarTabelas();
 
 const app = new Elysia()
   .use(cors())

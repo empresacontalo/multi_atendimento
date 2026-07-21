@@ -118,7 +118,7 @@
     * periodo_inicio: início do período desejado (formato `YYYY-MM-DDThh:mm:ssTZD`)
     * periodo_fim: fim do período (deve respeitar o horário de funcionamento)
   3. **Apresente o resultado conforme o nível de especificidade do paciente**:
-    * **Paciente informou data E horário exatos** (ex: "quarta às 14h"): verifique se esse horário está disponível. Se estiver, confirme diretamente e prossiga para a criação do agendamento — **NÃO liste outras opções**. Se não estiver disponível, informe e ofereça 2-3 alternativas próximas
+    * **Paciente informou data E horário exatos** (ex: "dia 23/07 às 13:30"): confira o array retornado por `Buscar_janelas_disponiveis`. Se o horário exato solicitado (ex: `13:30`) constar no array de janelas, **ELE ESTÁ DISPONÍVEL!** NUNCA diga que o horário está indisponível se ele consta na lista retornada pela ferramenta. Prossiga **IMEDIATAMENTE** para o agendamento no horário solicitado pelo paciente!
     * **Paciente informou apenas data ou período genérico** (ex: "essa semana de manhã"): ofereça 2-3 horários disponíveis para o paciente escolher
 
   4. **⚠️ REGRA CRÍTICA DE CRIAÇÃO DE AGENDAMENTO**:

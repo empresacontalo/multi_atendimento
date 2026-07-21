@@ -174,7 +174,8 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
             instrucoes:
               "O agendamento foi realizado no calendário constando 'Confirmaçao_Finaceira: Não confirmada'. " +
               "A imagem do QR Code E a chave PIX copia e cola em texto limpo já foram enviadas como mensagens no chat para o cliente. " +
-              "ATENÇÃO REGRA ABSOLUTA: NUNCA inclua o código da chave PIX copia e cola (a string de caracteres) no seu texto ou áudio de resposta! Apenas informe o cliente de forma verbal/amigável que o QR Code e a chave PIX copia e cola foram enviados no chat para ele copiar e pagar pelo app do banco.",
+              "ATENÇÃO REGRA ABSOLUTA: NUNCA inclua o código da chave PIX copia e cola (a string de caracteres) no seu texto ou áudio de resposta! Apenas informe o cliente de forma verbal/amigável que o QR Code e a chave PIX copia e cola foram enviados no chat para ele copiar e pagar pelo app do banco. " +
+              "Diga obrigatoriamente ao cliente: 'Se possível, me confirme por aqui quando efetuar o pagamento para confirmar sua reserva de horário'.",
           });
         } else {
           return JSON.stringify({
@@ -187,7 +188,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
             instrucoes:
               `O agendamento foi realizado no calendário constando 'Confirmaçao_Finaceira: Não confirmada'. ` +
               `Envie o link de pagamento (${cobranca.invoiceUrl}) para o cliente pagar a taxa com cartão de ${billingType === "CREDIT_CARD" ? "crédito" : "débito"}. ` +
-              `Informe que o horário já está reservado e que após o pagamento a confirmação financeira será atualizada para 'Confirmaçao_Finaceira: Confirmada R$50'.`,
+              `Informe que o horário já está reservado e diga ao cliente: 'Se possível, me confirme por aqui quando efetuar o pagamento para confirmar sua reserva de horário'.`,
           });
         }
       } catch (e) {

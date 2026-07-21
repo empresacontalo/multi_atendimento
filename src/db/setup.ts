@@ -56,9 +56,12 @@ export async function criarTabelas() {
         asaas_invoice_url TEXT,
         status TEXT NOT NULL DEFAULT 'PENDING',
         id_evento_gcal TEXT,
+        lembrete_30m_enviado BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      ALTER TABLE n8n_agendamentos_pendentes ADD COLUMN IF NOT EXISTS lembrete_30m_enviado BOOLEAN NOT NULL DEFAULT FALSE;
 
       CREATE INDEX IF NOT EXISTS idx_agendamentos_pendentes_payment ON n8n_agendamentos_pendentes(asaas_payment_id);
       CREATE INDEX IF NOT EXISTS idx_agendamentos_pendentes_telefone ON n8n_agendamentos_pendentes(telefone);

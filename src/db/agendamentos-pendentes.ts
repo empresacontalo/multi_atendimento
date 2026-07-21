@@ -19,6 +19,7 @@ export interface AgendamentoPendente {
   asaasInvoiceUrl: string | null;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "EXPIRED";
   idEventoGcal: string | null;
+  lembrete30mEnviado: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +99,23 @@ export async function atualizarStatusAgendamentoPendente(
   logger.info("db:agendamentos-pendentes", "Status de agendamento pendente atualizado", { id, status, idEventoGcal });
 }
 
+export async function buscarAgendamentosParaLembrete30Min(): Promise<AgendamentoPendente[]> {
+  const res = await pool.query(
+    `SELECT * FROM n8n_agendamentos_pendentes 
+     WHERE status = 'PENDING' 
+       AND (lembrete_30m_enviado IS FALSE OR lembrete_30m_enviado IS NULL) 
+       AND created_at <= NOW() - INTERVAL '30 minutes'`
+  );
+  return res.rows.map(mapRowToAgendamentoPendente);
+}
+
+export async function marcarLembrete30mEnviado(id: number): Promise<void> {
+  await pool.query(
+    `UPDATE n8n_agendamentos_pendentes SET lembrete_30m_enviado = TRUE, updated_at = NOW() WHERE id = $1`,
+    [id]
+  );
+}
+
 function mapRowToAgendamentoPendente(row: Record<string, unknown>): AgendamentoPendente {
   return {
     id: Number(row["id"]),
@@ -117,6 +135,7 @@ function mapRowToAgendamentoPendente(row: Record<string, unknown>): AgendamentoP
     asaasInvoiceUrl: row["asaas_invoice_url"] ? String(row["asaas_invoice_url"]) : null,
     status: row["status"] as AgendamentoPendente["status"],
     idEventoGcal: row["id_evento_gcal"] ? String(row["id_evento_gcal"]) : null,
+    lembrete30mEnviado: Boolean(row["lembrete_30m_enviado"]),
     createdAt: new Date(row["created_at"] as string | Date),
     updatedAt: new Date(row["updated_at"] as string | Date),
   };

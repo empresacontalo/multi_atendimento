@@ -10,9 +10,13 @@ import { setupRouter } from "./routes/setup.ts";
 import { webhookRouter } from "./routes/webhook.ts";
 import { followupRouter } from "./routes/followup.ts";
 import { asaasWebhookRouter } from "./routes/asaas-webhook.ts";
+import { iniciarJobVerificacaoPendencias } from "./jobs/verificar-pendencias.ts";
 
 // Garante que todas as tabelas (incluindo n8n_agendamentos_pendentes) existam no Postgres ao iniciar
 await criarTabelas();
+
+// Iniciar job periódico de verificação de pendências de pagamento de 30 minutos
+iniciarJobVerificacaoPendencias();
 
 const app = new Elysia()
   .use(cors())

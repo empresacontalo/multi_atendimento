@@ -132,15 +132,11 @@ export const buscarJanelasDisponiveis = tool(
     // Randomizar, amostrar e reordenar
     let resultado = [...janelas];
 
+    // Garantir ordenação cronológica determinante
+    resultado.sort((a, b) => new Date(a.inicioJanela).getTime() - new Date(b.inicioJanela).getTime());
+
     if (amostras && amostras < resultado.length) {
-      // Shuffle Fisher-Yates
-      for (let i = resultado.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [resultado[i], resultado[j]] = [resultado[j]!, resultado[i]!];
-      }
       resultado = resultado.slice(0, amostras);
-      // Reordenar cronologicamente
-      resultado.sort((a, b) => new Date(a.inicioJanela).getTime() - new Date(b.inicioJanela).getTime());
     }
 
     return JSON.stringify(resultado);

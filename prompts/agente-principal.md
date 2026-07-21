@@ -134,6 +134,7 @@
 
   1. **Informe ao cliente a política de reserva e cancelamento**:
      - *Cobrança da Taxa:* "Para a reserva de horário, solicitamos o pagamento de uma taxa de R$ 50,00 (à vista)."
+     - *Abatimento no Valor do Serviço:* Informe explicitamente ao cliente que **o valor de R$ 50,00 pago na taxa de reserva será descontado/abatido do valor total do procedimento** quando ele comparecer para realizar o atendimento.
      - *Serviços Gratuitos:* Em serviços gratuitos (ex: Avaliação de caso), explique que o valor de R$ 50,00 **será devolvido integralmente se o cliente comparecer no dia do atendimento**.
      - *Regra de 24h e No-Show:* Avise obrigatoriamente que **se o cliente não comparecer ou se a data não for alterada com pelo menos 24 horas de antecedência, o valor da taxa de reserva será perdido**.
   2. **Pergunte a forma de pagamento preferida**:

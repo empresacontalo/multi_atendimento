@@ -69,7 +69,10 @@ export async function enviarArquivo(
       `${urlConta(accountId)}/conversations/${conversationId}/messages`,
       {
         method: "POST",
-        headers: { api_access_token: TOKEN },
+        headers: {
+          "api-access-token": TOKEN,
+          api_access_token: TOKEN,
+        },
         body: form,
       },
     );

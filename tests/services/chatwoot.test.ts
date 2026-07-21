@@ -282,6 +282,10 @@ describe("chatwoot service", () => {
       expect(url as string).toContain("/conversations/100/messages");
       expect((options as RequestInit).method).toBe("POST");
       expect((options as RequestInit).body).toBeInstanceOf(FormData);
+      expect((options as RequestInit).headers).toEqual(expect.objectContaining({
+        "api-access-token": expect.any(String),
+        api_access_token: expect.any(String),
+      }));
     });
 
     test("inclui is_recorded_audio quando isRecordedAudio=true", async () => {

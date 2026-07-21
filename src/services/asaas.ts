@@ -5,8 +5,9 @@ import { logger } from "../lib/logger.ts";
 const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
 
 function getHeaders() {
+  const token = env.ASAAS_API_KEY.replace(/^\\+/, "").trim();
   return {
-    "access_token": env.ASAAS_API_KEY,
+    "access_token": token,
     "Content-Type": "application/json",
     "User-Agent": "multi_atendimento",
   };
@@ -42,7 +43,10 @@ export async function buscarOuCriarClienteAsaas(dados: {
   telefone: string;
   cpfCnpj?: string;
 }): Promise<ClienteAsaas> {
-  const phoneDigits = dados.telefone.replace(/\D/g, "");
+  let phoneDigits = dados.telefone.replace(/\D/g, "");
+  if (phoneDigits.startsWith("55") && (phoneDigits.length === 12 || phoneDigits.length === 13)) {
+    phoneDigits = phoneDigits.slice(2);
+  }
 
   try {
     const searchUrl = `${ASAAS_BASE_URL}/customers?mobilePhone=${encodeURIComponent(phoneDigits)}` +
@@ -77,8 +81,8 @@ export async function buscarOuCriarClienteAsaas(dados: {
 
   if (!createRes.ok) {
     const errBody = await createRes.text();
-    logger.error("asaas", "Erro ao criar cliente no Asaas:", errBody);
-    throw new Error(`Erro ao criar cliente no Asaas: ${errBody}`);
+    logger.error("asaas", `Erro ao criar cliente no Asaas (status ${createRes.status})`, { status: createRes.status, errBody });
+    throw new Error(`Erro ao criar cliente no Asaas (${createRes.status}): ${errBody}`);
   }
 
   const cliente = await createRes.json() as ClienteAsaas;
@@ -113,8 +117,8 @@ export async function criarCobrancaAsaas(dados: {
 
   if (!res.ok) {
     const errText = await res.text();
-    logger.error("asaas", "Erro ao criar cobrança no Asaas:", errText);
-    throw new Error(`Erro ao criar cobrança no Asaas: ${errText}`);
+    logger.error("asaas", `Erro ao criar cobrança no Asaas (status ${res.status})`, { status: res.status, errText });
+    throw new Error(`Erro ao criar cobrança no Asaas (${res.status}): ${errText}`);
   }
 
   const cobranca = await res.json() as CobrancaAsaas;
@@ -130,8 +134,8 @@ export async function obterQrCodePixAsaas(paymentId: string): Promise<QrCodePixA
 
   if (!res.ok) {
     const errText = await res.text();
-    logger.error("asaas", "Erro ao obter QR Code PIX:", errText);
-    throw new Error(`Erro ao obter QR Code PIX: ${errText}`);
+    logger.error("asaas", `Erro ao obter QR Code PIX (status ${res.status})`, { status: res.status, errText });
+    throw new Error(`Erro ao obter QR Code PIX (${res.status}): ${errText}`);
   }
 
   const qrData = await res.json() as QrCodePixAsaas;
@@ -146,8 +150,8 @@ export async function consultarCobrancaAsaas(paymentId: string): Promise<Cobranc
 
   if (!res.ok) {
     const errText = await res.text();
-    logger.error("asaas", "Erro ao consultar cobrança no Asaas:", errText);
-    throw new Error(`Erro ao consultar cobrança no Asaas: ${errText}`);
+    logger.error("asaas", `Erro ao consultar cobrança no Asaas (status ${res.status})`, { status: res.status, errText });
+    throw new Error(`Erro ao consultar cobrança no Asaas (${res.status}): ${errText}`);
   }
 
   const cobranca = await res.json() as CobrancaAsaas;

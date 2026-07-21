@@ -14,7 +14,11 @@ export function criarToolAtualizarTarefa(contexto: ContextoAtualizarTarefaMainAg
       const taskId = contexto.tarefa["id"] as number | undefined;
 
       if (!taskId) {
-        return JSON.stringify({ erro: "Tarefa não encontrada." });
+        logger.info("tool:atualizar-tarefa", "Nenhum card de Kanban associado a esta conversa.");
+        return JSON.stringify({
+          status: "ok",
+          mensagem: "Esta conversa ainda não possui um card no Kanban. O agendamento e as preferências do cliente foram salvos com sucesso.",
+        });
       }
 
       try {

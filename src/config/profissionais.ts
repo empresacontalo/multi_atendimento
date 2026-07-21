@@ -1,4 +1,5 @@
 import { logger } from "../lib/logger.ts";
+import { env } from "./env.ts";
 
 export interface Profissional {
   id: string;
@@ -8,76 +9,91 @@ export interface Profissional {
   disponibilidade: Record<number, Array<{ inicio: string; fim: string }>>;
 }
 
-const calendarIds: Record<string, string> = (() => {
-  const json = process.env["PROFISSIONAIS_CALENDAR_IDS"];
-  if (!json) return {};
-  try {
-    return JSON.parse(json) as Record<string, string>;
-  } catch {
-    logger.error("profissionais", "PROFISSIONAIS_CALENDAR_IDS JSON inválido");
-    return {};
-  }
-})();
-
-export const profissionais: Record<string, Profissional> = {
-  "dra-ana-costa": {
-    id: "dra-ana-costa",
-    nome: "Dra. Ana Costa",
-    especialidade: "Clínico Geral, Limpeza",
-    calendarId: calendarIds["dra-ana-costa"] ?? "dra-ana-costa@clinic.com",
-    disponibilidade: {
-      1: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }], // segunda
-      2: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }], // terça
-      3: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }], // quarta
-      4: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }], // quinta
-      5: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }], // sexta
-      6: [{ inicio: "08:00", fim: "11:00" }], // sábado
-    },
-  },
-  "dr-ricardo-lima": {
-    id: "dr-ricardo-lima",
-    nome: "Dr. Ricardo Lima",
-    especialidade: "Implantes, Cirurgia",
-    calendarId: calendarIds["dr-ricardo-lima"] ?? "dr-ricardo-lima@clinic.com",
-    disponibilidade: {
-      1: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      2: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      3: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      4: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      5: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      6: [{ inicio: "08:00", fim: "11:00" }],
-    },
-  },
-  "dra-beatriz-souza": {
-    id: "dra-beatriz-souza",
-    nome: "Dra. Beatriz Souza",
-    especialidade: "Ortodontia",
-    calendarId: calendarIds["dra-beatriz-souza"] ?? "dra-beatriz-souza@clinic.com",
-    disponibilidade: {
-      1: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      2: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      3: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      4: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      5: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      6: [{ inicio: "08:00", fim: "11:00" }],
-    },
-  },
-  "dr-felipe-torres": {
-    id: "dr-felipe-torres",
-    nome: "Dr. Felipe Torres",
-    especialidade: "Endodontia (Canal)",
-    calendarId: calendarIds["dr-felipe-torres"] ?? "dr-felipe-torres@clinic.com",
-    disponibilidade: {
-      1: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      2: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      3: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      4: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      5: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }],
-      6: [{ inicio: "08:00", fim: "11:00" }],
-    },
-  },
+const DISPONIBILIDADE_PADRAO: Record<number, Array<{ inicio: string; fim: string }>> = {
+  1: [{ inicio: "09:00", fim: "19:00" }], // Segunda
+  2: [{ inicio: "09:00", fim: "19:00" }], // Terça
+  3: [{ inicio: "09:00", fim: "19:00" }], // Quarta
+  4: [{ inicio: "09:00", fim: "19:00" }], // Quinta
+  5: [{ inicio: "09:00", fim: "19:00" }], // Sexta
+  6: [{ inicio: "09:00", fim: "19:00" }], // Sábado
 };
 
+function parseJsonSeguro<T>(jsonStr: string | undefined, fallback: T): T {
+  if (!jsonStr || typeof jsonStr !== "string") return fallback;
+  let cleaned = jsonStr.trim();
+  if ((cleaned.startsWith("'") && cleaned.endsWith("'")) || (cleaned.startsWith('"') && cleaned.endsWith('"'))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    try {
+      const fixed = cleaned.replace(/'/g, '"');
+      return JSON.parse(fixed) as T;
+    } catch {
+      return fallback;
+    }
+  }
+}
+
+export function obterProfissionais(): Record<string, Profissional> {
+  const calendarIds = parseJsonSeguro<Record<string, string>>(
+    process.env["PROFISSIONAIS_CALENDAR_IDS"] ?? env.PROFISSIONAIS_CALENDAR_IDS,
+    {},
+  );
+
+  const rawProfissionais = parseJsonSeguro<Array<{ id: string; nome: string; especialidade: string }>>(
+    process.env["PROFISSIONAIS"] ?? env.PROFISSIONAIS,
+    [],
+  );
+
+  const mapa: Record<string, Profissional> = {};
+
+  for (const p of rawProfissionais) {
+    if (!p.id) continue;
+    const calendarId = calendarIds[p.id] ?? calendarIds[p.id.toLowerCase()] ?? "";
+    const item: Profissional = {
+      id: p.id,
+      nome: p.nome,
+      especialidade: p.especialidade,
+      calendarId,
+      disponibilidade: DISPONIBILIDADE_PADRAO,
+    };
+    mapa[p.id] = item;
+    mapa[p.id.toLowerCase()] = item;
+  }
+
+  // Fallbacks de legado se o .env estiver vazio (Clínica Moreira)
+  if (Object.keys(mapa).length === 0) {
+    const legacyList = ["dra-ana-costa", "dr-ricardo-lima", "dra-beatriz-souza", "dr-felipe-torres"];
+    for (const leg of legacyList) {
+      mapa[leg] = {
+        id: leg,
+        nome: leg,
+        especialidade: "Odontologia",
+        calendarId: calendarIds[leg] ?? `${leg}@clinic.com`,
+        disponibilidade: DISPONIBILIDADE_PADRAO,
+      };
+    }
+  }
+
+  return mapa;
+}
+
 export function buscarProfissional(id: string): Profissional | undefined {
-  return profissionais[id];
+  if (!id) return undefined;
+  const mapa = obterProfissionais();
+  const exato = mapa[id] ?? mapa[id.toLowerCase()];
+  if (exato) return exato;
+
+  // Busca insensível por nome/slug parcial (ex: "luci", "cabelereira-luci", "Luci")
+  const idNorm = id.toLowerCase().replace(/[^a-z0-9]/g, "");
+  for (const key of Object.keys(mapa)) {
+    const keyNorm = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (keyNorm.includes(idNorm) || idNorm.includes(keyNorm)) {
+      return mapa[key];
+    }
+  }
+
+  return undefined;
 }

@@ -130,7 +130,25 @@ export const buscarJanelasDisponiveis = tool(
           const temConflito = eventos.some((evento) => {
             const evInicio = new Date(evento.start?.dateTime ?? evento.start?.date ?? "");
             const evFim = new Date(evento.end?.dateTime ?? evento.end?.date ?? "");
-            return cursor < evFim && fimJanela > evInicio;
+            const emConflitoHorario = cursor < evFim && fimJanela > evInicio;
+            if (!emConflitoHorario) return false;
+
+            // Se há conflito de horário, verificar se é um agendamento NÃO CONFIRMADO que caducou (> 1 hora)
+            const desc = evento.description ?? "";
+            const isNaoConfirmado = desc.includes("Confirmaçao_Finaceira: Não confirmada");
+
+            if (isNaoConfirmado) {
+              const tempoCriacao = new Date(evento.created ?? "").getTime();
+              const umHoraEmMs = 60 * 60 * 1000;
+              const tempoDecorrido = Date.now() - tempoCriacao;
+
+              // Se foi criado há mais de 1 hora sem confirmação financeira, caducou! A vaga fica disponível.
+              if (tempoDecorrido > umHoraEmMs) {
+                return false;
+              }
+            }
+
+            return true;
           });
 
           if (!temConflito) {

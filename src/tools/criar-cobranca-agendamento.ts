@@ -1,7 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { buscarProfissional } from "../config/profissionais.ts";
-import { listarEventos, criarEvento } from "../services/google-calendar.ts";
+import { listarEventos, criarEvento, deletarEvento } from "../services/google-calendar.ts";
 import { buscarOuCriarClienteAsaas, criarCobrancaAsaas, obterQrCodePixAsaas } from "../services/asaas.ts";
 import { salvarAgendamentoPendente } from "../db/agendamentos-pendentes.ts";
 import { enviarArquivo, atualizarContato } from "../services/chatwoot.ts";
@@ -42,16 +42,56 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
           eventoFim.toISOString(),
         );
 
-        const temConflito = eventos.some((ev) => {
+        const eventosComConflitoValido = eventos.filter((ev) => {
           const evInicio = new Date(ev.start?.dateTime ?? ev.start?.date ?? "");
           const evFim = new Date(ev.end?.dateTime ?? ev.end?.date ?? "");
-          return eventoInicio < evFim && eventoFim > evInicio;
+          const conflito = eventoInicio < evFim && eventoFim > evInicio;
+          if (!conflito) return false;
+
+          const desc = ev.description ?? "";
+          const isNaoConfirmado = desc.includes("Confirmaçao_Finaceira: Não confirmada");
+          if (isNaoConfirmado) {
+            const tempoCriacao = new Date(ev.created ?? "").getTime();
+            const umHoraEmMs = 60 * 60 * 1000;
+            if (Date.now() - tempoCriacao > umHoraEmMs) {
+              // Caducou há mais de 1h sem confirmação! Pode ser substituído.
+              return false;
+            }
+          }
+          return true;
         });
 
-        if (temConflito) {
+        if (eventosComConflitoValido.length > 0) {
           return JSON.stringify({
             erro: "HORÁRIO INDISPONÍVEL. O horário desejado possui conflito de agenda. Verifique outros horários disponíveis antes de tentar agendar.",
           });
+        }
+
+        // Remover eventos antigos não confirmados que caducaram (> 1h) para dar lugar ao novo agendamento
+        const eventosCaducados = eventos.filter((ev) => {
+          const evInicio = new Date(ev.start?.dateTime ?? ev.start?.date ?? "");
+          const evFim = new Date(ev.end?.dateTime ?? ev.end?.date ?? "");
+          const conflito = eventoInicio < evFim && eventoFim > evInicio;
+          if (!conflito) return false;
+
+          const desc = ev.description ?? "";
+          const isNaoConfirmado = desc.includes("Confirmaçao_Finaceira: Não confirmada");
+          if (isNaoConfirmado) {
+            const tempoCriacao = new Date(ev.created ?? "").getTime();
+            return Date.now() - tempoCriacao > 60 * 60 * 1000;
+          }
+          return false;
+        });
+
+        for (const evCaducado of eventosCaducados) {
+          if (evCaducado.id) {
+            try {
+              await deletarEvento(profissional.calendarId, evCaducado.id);
+              logger.info("tool:criar-cobranca-agendamento", "Evento antigo não confirmado (>1h) deletado do GCal para dar vaga ao novo agendamento:", evCaducado.id);
+            } catch (e) {
+              logger.warn("tool:criar-cobranca-agendamento", "Erro ao deletar evento caducado do GCal:", e);
+            }
+          }
         }
       } catch (e) {
         logger.error("tool:criar-cobranca-agendamento", "Erro ao listar eventos no calendário:", e);

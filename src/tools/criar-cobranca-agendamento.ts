@@ -4,7 +4,7 @@ import { buscarProfissional } from "../config/profissionais.ts";
 import { listarEventos, criarEvento, deletarEvento } from "../services/google-calendar.ts";
 import { buscarOuCriarClienteAsaas, criarCobrancaAsaas, obterQrCodePixAsaas } from "../services/asaas.ts";
 import { salvarAgendamentoPendente } from "../db/agendamentos-pendentes.ts";
-import { enviarArquivo, atualizarContato } from "../services/chatwoot.ts";
+import { enviarArquivo, enviarMensagem, atualizarContato } from "../services/chatwoot.ts";
 import { env } from "../config/env.ts";
 import { logger } from "../lib/logger.ts";
 

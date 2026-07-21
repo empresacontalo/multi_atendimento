@@ -242,6 +242,8 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
       description:
         "Utilize esta ferramenta para gerar a cobrança da taxa de reserva de R$ 50,00 no portal ASAAS para um agendamento. " +
         "Ela verifica a disponibilidade da vaga, registra o agendamento como pendente e retorna a chave PIX copia e cola ou o link de pagamento para cartão de débito/crédito. " +
+        "PRÉ-CONDIÇÃO OBRIGATÓRIA: Esta ferramenta SÓ pode ser chamada APÓS o cliente ter explicitamente dito sua forma de pagamento preferida (PIX, débito ou crédito) nesta conversa. " +
+        "NUNCA assuma ou inferira a forma de pagamento. Se o cliente não tiver informado ainda, PERGUNTE antes de chamar esta ferramenta. " +
         "IMPORTANTE: Sempre informe ao cliente antes de chamar essa ferramenta que a taxa de R$ 50 é cobrada para reservar o horário, e que cancelamentos/remarcações com menos de 24h antes perdem o valor.",
       schema: z.object({
         eventoInicio: z.string().describe("Data e horário do agendamento no futuro. Formato: YYYY-MM-DDThh:mm:ssTZD"),
@@ -251,7 +253,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         idProfissional: z.string().describe("Slug do profissional"),
         formaPagamento: z
           .enum(["pix", "debito", "credito"])
-          .describe("Forma de pagamento escolhida pelo cliente: 'pix', 'debito' ou 'credito'"),
+          .describe("Forma de pagamento escolhida EXPLICITAMENTE pelo cliente nesta conversa. OBRIGATÓRIO: não chame esta ferramenta sem o cliente ter dito a forma de pagamento. Valores aceitos: 'pix', 'debito' ou 'credito'"),
         cpf: z.string().optional().describe("CPF ou CNPJ do cliente se fornecido (opcional para PIX, recomendável para cartão)"),
       }),
     }

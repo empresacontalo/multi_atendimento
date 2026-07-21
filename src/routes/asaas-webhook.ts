@@ -25,13 +25,11 @@ export const asaasWebhookRouter = new Elysia().post(
   async ({ body, headers }) => {
     logger.info("asaas-webhook", ">>> Webhook Asaas recebido", { event: (body as Record<string, unknown>)?.event });
 
-    // Validar token se configurado
-    if (env.ASSAAS_WEBHOOK_TOKEN) {
-      const tokenRecebido = headers["asaas-access-token"] || headers["asaas_access_token"];
-      if (tokenRecebido !== env.ASSAAS_WEBHOOK_TOKEN) {
-        logger.warn("asaas-webhook", "Token de webhook Asaas inválido");
-        return { status: "unauthorized" };
-      }
+    // Validar token se presente no cabeçalho
+    const tokenRecebido = headers["asaas-access-token"] || headers["asaas_access_token"] || headers["access_token"];
+    if (tokenRecebido && env.ASSAAS_WEBHOOK_TOKEN && tokenRecebido !== env.ASSAAS_WEBHOOK_TOKEN) {
+      logger.warn("asaas-webhook", "Token de webhook Asaas inválido", { recebido: tokenRecebido });
+      return { status: "unauthorized" };
     }
 
     const parsed = asaasWebhookSchema.safeParse(body);
@@ -42,9 +40,12 @@ export const asaasWebhookRouter = new Elysia().post(
 
     const { event, payment } = parsed.data;
 
-    // Verificar se é pagamento confirmado ou recebido
-    if (event !== "PAYMENT_RECEIVED" && event !== "PAYMENT_CONFIRMED") {
-      logger.info("asaas-webhook", "Evento ignorado:", event);
+    // Verificar se é pagamento confirmado ou recebido (via event ou payment.status)
+    const isEventOk = event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED" || event === "PAYMENT_UPDATED";
+    const isStatusOk = payment.status === "RECEIVED" || payment.status === "CONFIRMED" || payment.status === "RECEIVED_IN_CASH";
+
+    if (!isEventOk && !isStatusOk) {
+      logger.info("asaas-webhook", "Evento e status ignorados:", { event, status: payment.status });
       return { status: "ignored", reason: "event_not_handled" };
     }
 

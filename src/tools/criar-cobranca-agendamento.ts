@@ -131,10 +131,12 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         if (billingType === "PIX") {
           let qrPixPayload = "";
           let qrEnviado = false;
+          let chaveEnviada = false;
           try {
             const pixData = await obterQrCodePixAsaas(cobranca.id);
             qrPixPayload = pixData.payload;
 
+            // Enviar imagem do QR Code
             if (pixData.encodedImage) {
               const imageBuffer = Buffer.from(pixData.encodedImage, "base64");
               await enviarArquivo(
@@ -146,6 +148,16 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
               );
               qrEnviado = true;
             }
+
+            // Enviar chave PIX copia e cola como MENSAGEM DE TEXTO SEPARADA para fácil cópia no WhatsApp
+            if (qrPixPayload) {
+              await enviarMensagem(
+                contexto.idConta,
+                contexto.idConversa,
+                qrPixPayload
+              );
+              chaveEnviada = true;
+            }
           } catch (e) {
             logger.error("tool:criar-cobranca-agendamento", "Erro ao obter/enviar QR Code PIX:", e);
           }
@@ -156,14 +168,13 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
             confirmacao_financeira: "Não confirmada",
             forma_pagamento: "PIX",
             valor: "R$ 50,00",
-            pix_copia_e_cola: qrPixPayload,
             qr_code_imagem_enviada: qrEnviado,
+            chave_pix_texto_enviada: chaveEnviada,
             link_pagamento: cobranca.invoiceUrl,
             instrucoes:
               "O agendamento foi realizado no calendário constando 'Confirmaçao_Finaceira: Não confirmada'. " +
-              "A imagem do QR Code PIX foi enviada no chat. " +
-              "Na sua mensagem, informe ao cliente que o horário já está reservado e forneça a chave PIX copia e cola exatamente em texto abaixo para ele pagar. " +
-              "Avise que após a liquidação do pagamento de R$ 50, a confirmação financeira será alterada para 'Confirmaçao_Finaceira: Confirmada R$50'.",
+              "A imagem do QR Code E a chave PIX copia e cola em texto limpo já foram enviadas como mensagens no chat para o cliente. " +
+              "ATENÇÃO REGRA ABSOLUTA: NUNCA inclua o código da chave PIX copia e cola (a string de caracteres) no seu texto ou áudio de resposta! Apenas informe o cliente de forma verbal/amigável que o QR Code e a chave PIX copia e cola foram enviados no chat para ele copiar e pagar pelo app do banco.",
           });
         } else {
           return JSON.stringify({

@@ -144,9 +144,8 @@
      - Mova o card para **"Agendado"** e defina o `end_date` com a véspera da consulta.
   5. **Forneça as informações de agendamento e pagamento ao cliente**:
      - Confirme que o horário foi reservado no sistema.
-     - Se **PIX**: a imagem do QR Code será enviada automaticamente no chat pela ferramenta. Na sua mensagem de texto, informe ao cliente que ele pode **escanear o QR Code enviado ou copiar a chave PIX copia e cola** abaixo para pagar pelo aplicativo do banco:
-       `Chave PIX copia e cola:`
-       `[PIX_COPIA_E_COLA]`
+     - Se **PIX**: A imagem do QR Code E a chave PIX copia e cola (mensagem de texto pura) são enviadas automaticamente pelo sistema como mensagens separadas no chat do WhatsApp.
+       ⚠️ **REGRA CRÍTICA ABSOLUTA**: NUNCA escreva ou inclua a chave PIX copia e cola (a string longa de caracteres) no seu texto ou áudio de resposta, pois o sistema de voz (TTS) tentará ler a chave letra por letra. Apenas informe o cliente de forma falada/escrita que o QR Code e a chave PIX copia e cola já foram enviados no chat para ele copiar e colar no app do banco.
      - Se **Débito ou Crédito**: envie o link de pagamento do ASAAS retornado pela ferramenta.
      - Avise ao cliente que após o pagamento da taxa de R$ 50, o cadastro do agendamento será atualizado para `Confirmaçao_Finaceira: Confirmada R$50`.
   6. **Quando o cliente avisar que pagou ("Já paguei", "Fiz o PIX")**:

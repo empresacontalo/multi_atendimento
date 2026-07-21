@@ -35,7 +35,7 @@ export function criarToolVerificarStatusPagamento(contexto: ContextoVerificarSta
         const cobranca = await consultarCobrancaAsaas(agendamentoPendente.asaasPaymentId);
         logger.info("tool:verificar-status-pagamento", "Status da cobrança no ASAAS", { id: cobranca.id, status: cobranca.status });
 
-        if (cobranca.status === "RECEIVED" || cobranca.status === "CONFIRMED") {
+        if (cobranca.status === "RECEIVED" || cobranca.status === "CONFIRMED" || cobranca.status === "RECEIVED_IN_CASH") {
           const profissional = buscarProfissional(agendamentoPendente.idProfissional);
           if (!profissional) {
             return JSON.stringify({ erro: `Profissional "${agendamentoPendente.idProfissional}" não encontrado.` });

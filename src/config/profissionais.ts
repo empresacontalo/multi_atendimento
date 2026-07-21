@@ -80,6 +80,23 @@ export function obterProfissionais(): Record<string, Profissional> {
   return mapa;
 }
 
+// Export para compatibilidade retroativa
+export const profissionais: Record<string, Profissional> = new Proxy({}, {
+  get(_target, prop: string) {
+    return obterProfissionais()[prop];
+  },
+  ownKeys() {
+    return Object.keys(obterProfissionais());
+  },
+  getOwnPropertyDescriptor(_target, prop: string) {
+    return {
+      enumerable: true,
+      configurable: true,
+      value: obterProfissionais()[prop],
+    };
+  },
+});
+
 export function buscarProfissional(id: string): Profissional | undefined {
   if (!id) return undefined;
   const mapa = obterProfissionais();

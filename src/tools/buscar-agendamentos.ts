@@ -1,6 +1,6 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { profissionais } from "../config/profissionais.ts";
+import { obterProfissionais } from "../config/profissionais.ts";
 import { buscarEventosPorQuery } from "../services/google-calendar.ts";
 import { logger } from "../lib/logger.ts";
 
@@ -14,8 +14,9 @@ export function criarToolBuscarAgendamentos(contexto: ContextoBuscarAgendamentos
       logger.info("tool:buscar-agendamentos", "Buscando agendamentos para:", contexto.telefone);
       try {
         const todosEventos: Array<{ profissional: string; eventos: unknown[] }> = [];
+        const listaProfissionais = Object.values(obterProfissionais());
 
-        for (const prof of Object.values(profissionais)) {
+        for (const prof of listaProfissionais) {
           const eventos = await buscarEventosPorQuery(
             prof.calendarId,
             contexto.telefone,

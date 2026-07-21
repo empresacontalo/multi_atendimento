@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: ${DOCKER_REGISTRY:-myregistry.com}/agente-atendimento:${IMAGE_TAG:-latest}
+    image: ${DOCKER_REGISTRY:-digitalarea.online}/agente-atendimento:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -68,6 +68,7 @@ services:
       - agent_postgres_data:/var/lib/postgresql/data
     networks:
       - agent_network
+      - npm_public
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-multi_atendimento}"]
       interval: 10s
@@ -83,6 +84,8 @@ networks:
   agent_network:
     driver: overlay
     attachable: true
+  npm_public:
+    external: true
 
 volumes:
   agent_postgres_data:

@@ -35,6 +35,8 @@ services:
       - CONVENIOS=${CONVENIOS}
       - PROFISSIONAIS=${PROFISSIONAIS}
       - PROCEDIMENTOS=${PROCEDIMENTOS}
+      - ASAAS_API_KEY=${ASAAS_API_KEY}
+      - ASSAAS_WEBHOOK_TOKEN=${ASSAAS_WEBHOOK_TOKEN}
     ports:
       - target: 3020
         published: 3020

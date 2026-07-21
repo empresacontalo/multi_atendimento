@@ -1,8 +1,27 @@
 import { google } from "googleapis";
 import { env } from "../config/env.ts";
 
+function parseJsonSeguro<T>(jsonStr: string | undefined, fallback: T): T {
+  if (!jsonStr || typeof jsonStr !== "string") return fallback;
+  let cleaned = jsonStr.trim();
+  if ((cleaned.startsWith("'") && cleaned.endsWith("'")) || (cleaned.startsWith('"') && cleaned.endsWith('"'))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    try {
+      const fixed = cleaned.replace(/'/g, '"');
+      return JSON.parse(fixed) as T;
+    } catch {
+      return fallback;
+    }
+  }
+}
+
 function obterAuth() {
-  const credenciais = JSON.parse(env.GOOGLE_CALENDAR_CREDENTIALS);
+  const raw = process.env["GOOGLE_CALENDAR_CREDENTIALS"] ?? env.GOOGLE_CALENDAR_CREDENTIALS;
+  const credenciais = parseJsonSeguro<Record<string, unknown>>(raw, {});
   return new google.auth.GoogleAuth({
     credentials: credenciais,
     scopes: ["https://www.googleapis.com/auth/calendar"],

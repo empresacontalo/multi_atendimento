@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { criarToolsAgenteClinica, criarToolsFollowup } from "../../src/tools/factory.ts";
 
 describe("tool factory - main agent", () => {
-  test("cria 9 tools", () => {
+  test("cria 11 tools", () => {
     const tools = criarToolsAgenteClinica({
       idMensagem: "1",
       idConta: "8",
@@ -15,7 +15,7 @@ describe("tool factory - main agent", () => {
       tarefa: {},
     });
 
-    expect(tools.length).toBe(9);
+    expect(tools.length).toBe(11);
   });
 
   test("tools têm nomes corretos", () => {
@@ -39,9 +39,11 @@ describe("tool factory - main agent", () => {
       "Buscar_janelas_disponiveis",
       "Cancelar_agendamento",
       "Criar_agendamento",
+      "Criar_cobranca_agendamento",
       "Escalar_humano",
       "Reagir_mensagem",
       "Refletir",
+      "Verificar_status_pagamento",
     ]);
   });
 

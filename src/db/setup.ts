@@ -37,6 +37,31 @@ export async function criarTabelas() {
 
       CREATE INDEX IF NOT EXISTS idx_historico_session ON n8n_historico_mensagens(session_id);
       CREATE INDEX IF NOT EXISTS idx_historico_created ON n8n_historico_mensagens(created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS n8n_agendamentos_pendentes (
+        id SERIAL PRIMARY KEY,
+        id_conta TEXT NOT NULL,
+        id_conversa TEXT NOT NULL,
+        id_contato TEXT NOT NULL,
+        telefone TEXT NOT NULL,
+        id_profissional TEXT NOT NULL,
+        titulo TEXT NOT NULL,
+        descricao TEXT,
+        evento_inicio TIMESTAMPTZ NOT NULL,
+        duracao_minutos INTEGER NOT NULL,
+        valor_taxa NUMERIC(10,2) NOT NULL DEFAULT 50.00,
+        forma_pagamento TEXT NOT NULL,
+        asaas_customer_id TEXT NOT NULL,
+        asaas_payment_id TEXT UNIQUE NOT NULL,
+        asaas_invoice_url TEXT,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        id_evento_gcal TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_agendamentos_pendentes_payment ON n8n_agendamentos_pendentes(asaas_payment_id);
+      CREATE INDEX IF NOT EXISTS idx_agendamentos_pendentes_telefone ON n8n_agendamentos_pendentes(telefone);
     `);
     logger.info("db", "Tabelas criadas com sucesso");
   } finally {

@@ -2,6 +2,8 @@ import type { StructuredToolInterface } from "@langchain/core/tools";
 import { refletir } from "./refletir.ts";
 import { buscarJanelasDisponiveis } from "./buscar-janelas.ts";
 import { criarToolCriarAgendamento } from "./criar-agendamento.ts";
+import { criarToolCriarCobrancaAgendamento } from "./criar-cobranca-agendamento.ts";
+import { criarToolVerificarStatusPagamento } from "./verificar-status-pagamento.ts";
 import { criarToolBuscarAgendamentos } from "./buscar-agendamentos.ts";
 import { atualizarAgendamento } from "./atualizar-agendamento.ts";
 import { criarToolCancelarAgendamento } from "./cancelar-agendamento.ts";
@@ -32,6 +34,18 @@ export function criarToolsAgenteClinica(contexto: ContextoMainAgent): Structured
     buscarJanelasDisponiveis,
     criarToolCriarAgendamento({
       idConta: contexto.idConta,
+      idContato: contexto.idContato,
+      telefone: contexto.telefone,
+    }),
+    criarToolCriarCobrancaAgendamento({
+      idConta: contexto.idConta,
+      idConversa: contexto.idConversa,
+      idContato: contexto.idContato,
+      telefone: contexto.telefone,
+    }),
+    criarToolVerificarStatusPagamento({
+      idConta: contexto.idConta,
+      idConversa: contexto.idConversa,
       idContato: contexto.idContato,
       telefone: contexto.telefone,
     }),

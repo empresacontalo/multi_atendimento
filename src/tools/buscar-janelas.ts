@@ -23,6 +23,25 @@ function getSpComponents(date: Date): { dayOfWeek: number; hour: number; minute:
   };
 }
 
+function formatarIsoComFuso(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: env.TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? "00";
+  const year = get("year");
+  const month = get("month");
+  const day = get("day");
+  const hour = get("hour");
+  const minute = get("minute");
+  const second = get("second");
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}-03:00`;
+}
+
 export const buscarJanelasDisponiveis = tool(
   async (input) => {
     logger.info("tool:buscar-janelas", "Buscando janelas", {
@@ -116,8 +135,8 @@ export const buscarJanelasDisponiveis = tool(
 
           if (!temConflito) {
             janelas.push({
-              inicioJanela: cursor.toISOString(),
-              fimJanela: fimJanela.toISOString(),
+              inicioJanela: formatarIsoComFuso(cursor),
+              fimJanela: formatarIsoComFuso(fimJanela),
               idAgenda: profissional.calendarId,
             });
           }

@@ -6,6 +6,9 @@ const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
 
 function getHeaders() {
   const token = env.ASAAS_API_KEY.replace(/^\\+/, "").trim();
+  if (!token) {
+    throw new Error("Variável ASAAS_API_KEY não foi configurada nas variáveis de ambiente (.env do servidor).");
+  }
   return {
     "access_token": token,
     "Content-Type": "application/json",

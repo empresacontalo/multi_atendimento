@@ -20,7 +20,6 @@ const obrigatorias = [
   "CONVENIOS",
   "PROFISSIONAIS",
   "PROCEDIMENTOS",
-  "ASAAS_API_KEY",
 ] as const;
 
 for (const variavel of obrigatorias) {
@@ -71,6 +70,6 @@ export const env = {
   PROFISSIONAIS: process.env["PROFISSIONAIS"]!,
   PROCEDIMENTOS: process.env["PROCEDIMENTOS"]!,
 
-  ASAAS_API_KEY: process.env["ASAAS_API_KEY"]!,
+  ASAAS_API_KEY: process.env["ASAAS_API_KEY"] ?? "",
   ASSAAS_WEBHOOK_TOKEN: process.env["ASSAAS_WEBHOOK_TOKEN"] ?? process.env["ASAAS_WEBHOOK_TOKEN"] ?? "",
 } as const;

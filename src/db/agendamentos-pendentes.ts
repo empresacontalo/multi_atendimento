@@ -101,10 +101,18 @@ export async function atualizarStatusAgendamentoPendente(
 
 export async function buscarAgendamentosParaLembrete30Min(): Promise<AgendamentoPendente[]> {
   const res = await pool.query(
-    `SELECT * FROM n8n_agendamentos_pendentes 
-     WHERE status = 'PENDING' 
-       AND (lembrete_30m_enviado IS FALSE OR lembrete_30m_enviado IS NULL) 
-       AND created_at <= NOW() - INTERVAL '30 minutes'`
+    // Busca agendamentos PENDING com > 30min, excluindo aqueles cuja conversa já tem
+    // um agendamento CONFIRMED mais recente (evita lembrete indevido após nova confirmação)
+    `SELECT p.* FROM n8n_agendamentos_pendentes p
+     WHERE p.status = 'PENDING'
+       AND (p.lembrete_30m_enviado IS FALSE OR p.lembrete_30m_enviado IS NULL)
+       AND p.created_at <= NOW() - INTERVAL '30 minutes'
+       AND NOT EXISTS (
+         SELECT 1 FROM n8n_agendamentos_pendentes c
+         WHERE c.id_conversa = p.id_conversa
+           AND c.status = 'CONFIRMED'
+           AND c.created_at > p.created_at
+       )`
   );
   return res.rows.map(mapRowToAgendamentoPendente);
 }

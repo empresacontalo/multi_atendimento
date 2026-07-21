@@ -9,9 +9,28 @@ import { buscarProfissional } from "../config/profissionais.ts";
 import { atualizarEvento } from "../services/google-calendar.ts";
 import { env } from "../config/env.ts";
 import { logger } from "../lib/logger.ts";
+import { pool } from "../db/pool.ts";
 
 export async function executarVerificacaoPendencias30m() {
   try {
+    // Primeiro: expirar silenciosamente bookings PENDING antigos cuja conversa já tem CONFIRMED mais novo.
+    // Isso evita que lembretes sejam enviados para cobranças antigas quando o cliente já fez um novo agendamento confirmado.
+    try {
+      await pool.query(
+        `UPDATE n8n_agendamentos_pendentes p
+         SET status = 'EXPIRED', updated_at = NOW()
+         WHERE p.status = 'PENDING'
+           AND EXISTS (
+             SELECT 1 FROM n8n_agendamentos_pendentes c
+             WHERE c.id_conversa = p.id_conversa
+               AND c.status = 'CONFIRMED'
+               AND c.created_at > p.created_at
+           )`
+      );
+    } catch (e) {
+      logger.error("jobs:verificar-pendencias", "Erro ao expirar bookings órfãos:", e);
+    }
+
     const pendentes = await buscarAgendamentosParaLembrete30Min();
     if (pendentes.length === 0) return;
 
@@ -19,11 +38,13 @@ export async function executarVerificacaoPendencias30m() {
 
     for (const item of pendentes) {
       try {
-        // Consultar status atualizado no ASAAS
+        // Consultar status atualizado no ASAAS ANTES de qualquer ação
+        logger.info("jobs:verificar-pendencias", `Consultando ASAAS para agendamento id ${item.id}`, { paymentId: item.asaasPaymentId });
         const cobranca = await consultarCobrancaAsaas(item.asaasPaymentId);
+        logger.info("jobs:verificar-pendencias", `ASAAS status para id ${item.id}`, { status: cobranca.status });
 
         if (cobranca.status === "RECEIVED" || cobranca.status === "CONFIRMED" || cobranca.status === "RECEIVED_IN_CASH") {
-          // Pagamento já foi efetuado! Confirmar no GCal e DB
+          // Pagamento já foi efetuado! Confirmar no GCal e DB — NÃO enviar lembrete
           const profissional = buscarProfissional(item.idProfissional);
           if (profissional && item.idEventoGcal) {
             const descricaoConfirmada = `${item.descricao}\n\nTelefone: ${item.telefone}\nConfirmaçao_Finaceira: Confirmada R$50`;
@@ -54,8 +75,10 @@ export async function executarVerificacaoPendencias30m() {
             `⚠️ *Importante:* Caso precise remarcar ou cancelar, informe-nos com pelo menos *24 horas de antecedência*. Te esperamos!`;
 
           await enviarMensagem(item.idConta, item.idConversa, msgConfirmacao);
+          logger.info("jobs:verificar-pendencias", `Pagamento já confirmado no ASAAS para id ${item.id} — confirmação enviada, nenhum lembrete enviado`);
+
         } else if (cobranca.status === "PENDING") {
-          // Ainda pendente! Enviar mensagem de lembrete dos 30 minutos
+          // Ainda pendente no ASAAS! Enviar mensagem de lembrete dos 30 minutos
           const mensagemLembrete =
             `⚠️ *Lembrete de Agendamento*\n\n` +
             `A taxa de reserva de horário (R$ 50,00) não consta como paga até o momento.\n\n` +
@@ -65,9 +88,11 @@ export async function executarVerificacaoPendencias30m() {
           await enviarMensagem(item.idConta, item.idConversa, mensagemLembrete);
           await marcarLembrete30mEnviado(item.id);
           logger.info("jobs:verificar-pendencias", `Lembrete de 30 minutos enviado com sucesso para agendamento id ${item.id}`);
+
         } else {
           // Cancelado ou expirado no ASAAS
           await atualizarStatusAgendamentoPendente(item.id, "EXPIRED");
+          logger.info("jobs:verificar-pendencias", `Agendamento id ${item.id} marcado como EXPIRED (status ASAAS: ${cobranca.status})`);
         }
       } catch (e) {
         logger.error("jobs:verificar-pendencias", `Erro ao processar item id ${item.id}:`, e);

@@ -17,7 +17,10 @@ const app = new Elysia()
   .use(webhookRouter)
   .use(followupRouter)
   .use(asaasWebhookRouter)
-  .listen(env.PORT);
+  .listen({
+    port: env.PORT,
+    hostname: "0.0.0.0",
+  });
 
 logger.info("server", `Clínica Moreira Agent rodando em http://localhost:${env.PORT}`);
 

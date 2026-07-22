@@ -12,7 +12,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-langchain}
       - OPENAI_MODEL_MINI=${OPENAI_MODEL_MINI:-langchain}
-      - OPENAI_MODEL_WHISPER=${OPENAI_MODEL_WHISPER:-dg/whisper-large}
+      - OPENAI_MODEL_WHISPER=${OPENAI_MODEL_WHISPER:-deepgram/whisper-large}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_API_KEY=${LLM_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}

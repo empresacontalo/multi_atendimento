@@ -11,16 +11,22 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
     }
     const audioBuffer = await audioRes.arrayBuffer();
 
-    // Enviar para Whisper
+    // Enviar para Whisper / Speech-to-Text via LLM_BASE_URL (Omniroute ou OpenAI)
     const form = new FormData();
     form.append("file", new Blob([audioBuffer], { type: "audio/ogg" }), "audio.ogg");
-    form.append("model", "whisper-1");
+    form.append("model", env.OPENAI_MODEL_WHISPER);
     form.append("language", "pt");
 
-    const res = await fetchComTimeout("https://api.openai.com/v1/audio/transcriptions", {
+    const endpointUrl = env.LLM_BASE_URL
+      ? `${env.LLM_BASE_URL.replace(/\/+$/, "")}/audio/transcriptions`
+      : "https://api.openai.com/v1/audio/transcriptions";
+
+    const apiKey = env.LLM_API_KEY || env.OPENAI_API_KEY;
+
+    const res = await fetchComTimeout(endpointUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: form,
       timeout: 60000,
@@ -28,7 +34,7 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`[openai] Whisper falhou (${res.status}): ${text}`);
+      throw new Error(`[openai] Transcrição falhou (${res.status}): ${text}`);
     }
 
     const data = (await res.json()) as { text: string };

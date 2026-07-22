@@ -24,6 +24,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         duracao: input.duracaoMinutos,
         titulo: input.titulo,
         formaPagamento: input.formaPagamento,
+        cpf: input.cpf,
       });
 
       const profissional = buscarProfissional(input.idProfissional);
@@ -97,6 +98,32 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         logger.error("tool:criar-cobranca-agendamento", "Erro ao listar eventos no calendário:", e);
       }
 
+      // Mapear forma de pagamento para o padrão ASAAS
+      let billingType: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" = "PIX";
+      const fp = input.formaPagamento.toLowerCase().trim();
+      if (fp.includes("credito") || fp.includes("crédito")) {
+        billingType = "CREDIT_CARD";
+      } else if (fp.includes("debito") || fp.includes("débito")) {
+        billingType = "DEBIT_CARD";
+      }
+
+      // Tentar resolver CPF se não foi passado no input
+      let cpfFinal = input.cpf;
+      if (!cpfFinal) {
+        const matchCpf = (input.descricao + " " + input.titulo).match(/\b\d{3}[.-]?\d{3}[.-]?\d{3}[.-]?\d{2}\b/);
+        if (matchCpf) {
+          cpfFinal = matchCpf[0];
+          logger.info("tool:criar-cobranca-agendamento", "CPF extraído automaticamente da descrição/título:", cpfFinal);
+        }
+      }
+
+      // Validação: Para Cartão de Crédito ou Débito, CPF é obrigatório no Asaas
+      if ((billingType === "CREDIT_CARD" || billingType === "DEBIT_CARD") && !cpfFinal) {
+        return JSON.stringify({
+          erro: "CPF OBRIGATÓRIO PARA PAGAMENTO COM CARTÃO DE CRÉDITO OU DÉBITO. O parâmetro 'cpf' não foi fornecido. Se o cliente já disse o CPF na conversa, extraia os números do CPF e chame esta ferramenta novamente passando o parâmetro 'cpf'. Caso contrário, pergunte o CPF ao cliente para gerar a cobrança no cartão.",
+        });
+      }
+
       // 1. Criar Evento no Google Calendar imediatamente com "Confirmaçao_Finaceira: Não confirmada"
       const descricaoCompleta = `${input.descricao}\n\nTelefone: ${contexto.telefone}\nConfirmaçao_Finaceira: Não confirmada`;
       let eventoCriado: { id?: string | null; htmlLink?: string | null } | null = null;
@@ -121,21 +148,12 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         return JSON.stringify({ erro: "Erro ao criar agendamento no calendário: " + (e as Error).message });
       }
 
-      // Mapear forma de pagamento para o padrão ASAAS
-      let billingType: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" = "PIX";
-      const fp = input.formaPagamento.toLowerCase().trim();
-      if (fp.includes("credito") || fp.includes("crédito")) {
-        billingType = "CREDIT_CARD";
-      } else if (fp.includes("debito") || fp.includes("débito")) {
-        billingType = "DEBIT_CARD";
-      }
-
       try {
         // 2. Buscar ou Criar Cliente no ASAAS
         const clienteAsaas = await buscarOuCriarClienteAsaas({
           nome: input.titulo,
           telefone: contexto.telefone,
-          cpfCnpj: input.cpf,
+          cpfCnpj: cpfFinal,
         });
 
         // 3. Criar Cobrança de R$ 50 no ASAAS
@@ -252,6 +270,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         "Ela verifica a disponibilidade da vaga, registra o agendamento como pendente e retorna a chave PIX copia e cola ou o link de pagamento para cartão de débito/crédito. " +
         "PRÉ-CONDIÇÃO OBRIGATÓRIA: Esta ferramenta SÓ pode ser chamada APÓS o cliente ter explicitamente dito sua forma de pagamento preferida (PIX, débito ou crédito) nesta conversa. " +
         "NUNCA assuma ou inferira a forma de pagamento. Se o cliente não tiver informado ainda, PERGUNTE antes de chamar esta ferramenta. " +
+        "ATENÇÃO CPF PARA CARTÃO: Se a forma de pagamento for cartão de crédito ou débito, o campo 'cpf' é OBRIGATÓRIO. Se o cliente já tiver dito o CPF no histórico da conversa, você DEVE OBRIGATORIAMENTE extrair e passar o CPF no parâmetro 'cpf' ao chamar esta ferramenta! " +
         "IMPORTANTE: Sempre informe ao cliente antes de chamar essa ferramenta que a taxa de R$ 50 é cobrada para reservar o horário, e que cancelamentos/remarcações com menos de 24h antes perdem o valor.",
       schema: z.object({
         eventoInicio: z.string().describe("Data e horário do agendamento no futuro. Formato: YYYY-MM-DDThh:mm:ssTZD"),
@@ -262,7 +281,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         formaPagamento: z
           .enum(["pix", "debito", "credito"])
           .describe("Forma de pagamento escolhida EXPLICITAMENTE pelo cliente nesta conversa. OBRIGATÓRIO: não chame esta ferramenta sem o cliente ter dito a forma de pagamento. Valores aceitos: 'pix', 'debito' ou 'credito'"),
-        cpf: z.string().optional().describe("CPF ou CNPJ do cliente se fornecido (opcional para PIX, recomendável para cartão)"),
+        cpf: z.string().optional().describe("CPF ou CNPJ do cliente. OBRIGATÓRIO SE A FORMA DE PAGAMENTO FOR CRÉDITO OU DÉBITO! Se o cliente disse o CPF no histórico da conversa, você DEVE extrair e passar neste campo!"),
       }),
     }
   );

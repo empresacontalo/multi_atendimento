@@ -71,6 +71,7 @@ services:
     image: langfuse/langfuse:2
     environment:
       - PORT=3000
+      - HOSTNAME=0.0.0.0
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-M3ub4nc0p0stgr3s}@agent_postgres:5432/langfuse
       - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:-langfuse_secret_key_32_characters_min}
       - SALT=${LANGFUSE_SALT:-langfuse_salt_key_32_characters_min_len}

@@ -84,7 +84,9 @@ services:
         mode: ingress
     networks:
       - agent_network
-      - npm_public
+      - npm_public:
+          aliases:
+            - langfuse
     depends_on:
       - agent_postgres
     deploy:

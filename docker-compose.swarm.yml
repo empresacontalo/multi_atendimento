@@ -45,11 +45,6 @@ services:
       - PROCEDIMENTOS=${PROCEDIMENTOS}
       - ASAAS_API_KEY=${ASAAS_API_KEY}
       - ASSAAS_WEBHOOK_TOKEN=${ASSAAS_WEBHOOK_TOKEN}
-    ports:
-      - target: 3020
-        published: 3020
-        protocol: tcp
-        mode: ingress
     networks:
       - agent_network
       - npm_public
@@ -78,11 +73,6 @@ services:
       - ENCRYPTION_KEY=${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       - NEXTAUTH_URL=${LANGFUSE_NEXTAUTH_URL:-https://langfuse.digitalarea.online}
       - TELEMETRY_ENABLED=false
-    ports:
-      - target: 3000
-        published: ${LANGFUSE_PORT:-3050}
-        protocol: tcp
-        mode: ingress
     networks:
       - agent_network
       - npm_public

@@ -51,6 +51,9 @@ export const env = {
   ELEVENLABS_API_KEY: process.env["ELEVENLABS_API_KEY"]!,
   ELEVENLABS_VOICE_ID: process.env["ELEVENLABS_VOICE_ID"]!,
 
+  TTS_PROVIDER: process.env["TTS_PROVIDER"] ?? "elevenlabs",
+  DEEPGRAM_VOICE: process.env["DEEPGRAM_VOICE"] ?? "deepgram/aura-stella-en",
+
   TZ: process.env["TZ"] ?? "America/Sao_Paulo",
 
   DEBOUNCE_DELAY_MS: Number(process.env["DEBOUNCE_DELAY_MS"] ?? "16000"),

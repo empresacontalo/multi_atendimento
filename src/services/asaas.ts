@@ -63,8 +63,32 @@ export async function buscarOuCriarClienteAsaas(dados: {
     if (res.ok) {
       const data = await res.json() as { data?: ClienteAsaas[] };
       if (data.data && data.data.length > 0 && data.data[0]?.id) {
-        logger.info("asaas", "Cliente Asaas encontrado", { id: data.data[0].id, nome: dados.nome });
-        return data.data[0];
+        const clienteExistente = data.data[0];
+        logger.info("asaas", "Cliente Asaas encontrado", { id: clienteExistente.id, nome: dados.nome });
+
+        // Se CPF foi fornecido e o cliente existente no Asaas não possui CPF ou precisa atualizar
+        if (dados.cpfCnpj) {
+          const cpfLimpo = dados.cpfCnpj.replace(/\D/g, "");
+          if (clienteExistente.cpfCnpj !== cpfLimpo) {
+            try {
+              const updateRes = await fetchComTimeout(`${ASAAS_BASE_URL}/customers/${clienteExistente.id}`, {
+                method: "PUT",
+                headers: getHeaders(),
+                body: JSON.stringify({
+                  cpfCnpj: cpfLimpo,
+                }),
+              });
+              if (updateRes.ok) {
+                const clienteAtualizado = await updateRes.json() as ClienteAsaas;
+                logger.info("asaas", "CPF do cliente Asaas atualizado com sucesso", { id: clienteAtualizado.id, cpfCnpj: cpfLimpo });
+                return clienteAtualizado;
+              }
+            } catch (errUpd) {
+              logger.warn("asaas", "Erro ao atualizar CPF do cliente no Asaas", errUpd);
+            }
+          }
+        }
+        return clienteExistente;
       }
     }
   } catch (err) {

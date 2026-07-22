@@ -234,6 +234,14 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         }
       } catch (e) {
         logger.error("tool:criar-cobranca-agendamento", "Erro ao gerar cobrança ASAAS:", e);
+        if (eventoCriado?.id) {
+          try {
+            await deletarEvento(profissional.calendarId, eventoCriado.id);
+            logger.info("tool:criar-cobranca-agendamento", "Evento não confirmado removido do GCal devido a falha na cobrança ASAAS:", eventoCriado.id);
+          } catch (delErr) {
+            logger.warn("tool:criar-cobranca-agendamento", "Erro ao remover evento não confirmado após falha da cobrança:", delErr);
+          }
+        }
         return JSON.stringify({ erro: "Erro ao gerar cobrança de agendamento no ASAAS: " + (e as Error).message });
       }
     },

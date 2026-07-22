@@ -1,6 +1,5 @@
 import { StateGraph, END } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { MainAgentState, type MainAgentStateType } from "./state.ts";
 import { gerarPromptAgentePrincipal } from "./prompt.ts";
@@ -15,6 +14,7 @@ import { criarToolsAgenteClinica } from "../../tools/factory.ts";
 import { obterCheckpointer } from "../../db/checkpointer.ts";
 import { logger } from "../../lib/logger.ts";
 import { criarLangfuseHandler, finalizarLangfuseHandler } from "../../lib/langfuse.ts";
+import { createChatModel } from "../../lib/llm.ts";
 
 // --- Nós do grafo ---
 
@@ -124,9 +124,8 @@ async function executarAgente(state: MainAgentStateType) {
     tarefa,
   });
 
-  const model = new ChatOpenAI({
+  const model = createChatModel({
     modelName: env.OPENAI_MODEL,
-    openAIApiKey: env.OPENAI_API_KEY,
     temperature: 0.7,
   });
 

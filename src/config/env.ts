@@ -36,6 +36,9 @@ export const env = {
   OPENAI_MODEL: process.env["OPENAI_MODEL"] ?? "gpt-5.2",
   OPENAI_MODEL_MINI: process.env["OPENAI_MODEL_MINI"] ?? "gpt-4.1-mini",
 
+  LLM_BASE_URL: process.env["LLM_BASE_URL"] || process.env["OPENAI_BASE_URL"] || undefined,
+  LLM_API_KEY: process.env["LLM_API_KEY"] || process.env["OPENAI_API_KEY"]!,
+
   CHATWOOT_BASE_URL: process.env["CHATWOOT_BASE_URL"]!,
   CHATWOOT_API_TOKEN: process.env["CHATWOOT_API_TOKEN"]!,
   CHATWOOT_ACCOUNT_ID: process.env["CHATWOOT_ACCOUNT_ID"]!,
@@ -56,7 +59,7 @@ export const env = {
 
   LANGFUSE_SECRET_KEY: process.env["LANGFUSE_SECRET_KEY"] ?? "",
   LANGFUSE_PUBLIC_KEY: process.env["LANGFUSE_PUBLIC_KEY"] ?? "",
-  LANGFUSE_BASEURL: process.env["LANGFUSE_BASEURL"] ?? "https://cloud.langfuse.com",
+  LANGFUSE_BASEURL: process.env["LANGFUSE_BASEURL"] || process.env["LANGFUSE_BASE_URL"] || "https://cloud.langfuse.com",
 
   PROFISSIONAIS_CALENDAR_IDS: process.env["PROFISSIONAIS_CALENDAR_IDS"]!,
   NOME_NEGOCIO: process.env["NOME_NEGOCIO"]!,

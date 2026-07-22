@@ -1,6 +1,5 @@
 import { StateGraph, END } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { FollowUpState, type FollowUpStateType } from "./state.ts";
 import { gerarPromptFollowup, PROMPT_LEMBRETE, PROMPT_POS_CONSULTA } from "./prompts.ts";
@@ -11,6 +10,7 @@ import { criarToolsFollowup } from "../../tools/factory.ts";
 import { obterCheckpointer } from "../../db/checkpointer.ts";
 import { logger } from "../../lib/logger.ts";
 import { criarLangfuseHandler, finalizarLangfuseHandler } from "../../lib/langfuse.ts";
+import { createChatModel } from "../../lib/llm.ts";
 
 // --- Nós do grafo ---
 
@@ -72,9 +72,8 @@ async function agenteFollowup(state: FollowUpStateType) {
     board_step: state.board_step,
   });
 
-  const model = new ChatOpenAI({
+  const model = createChatModel({
     modelName: env.OPENAI_MODEL,
-    openAIApiKey: env.OPENAI_API_KEY,
     temperature: 0.7,
   });
 
@@ -129,9 +128,8 @@ async function agenteFollowup(state: FollowUpStateType) {
 async function agenteLembrete(state: FollowUpStateType) {
   logger.info("follow-up", "executando agente lembrete...");
 
-  const model = new ChatOpenAI({
+  const model = createChatModel({
     modelName: env.OPENAI_MODEL,
-    openAIApiKey: env.OPENAI_API_KEY,
     temperature: 0.7,
   });
 
@@ -174,9 +172,8 @@ async function agenteLembrete(state: FollowUpStateType) {
 async function agentePosConsulta(state: FollowUpStateType) {
   logger.info("follow-up", "executando agente pós-consulta...");
 
-  const model = new ChatOpenAI({
+  const model = createChatModel({
     modelName: env.OPENAI_MODEL,
-    openAIApiKey: env.OPENAI_API_KEY,
     temperature: 0.7,
   });
 

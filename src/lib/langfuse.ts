@@ -27,7 +27,11 @@ export function criarLangfuseHandler(
     baseUrl: env.LANGFUSE_BASEURL,
     sessionId: opts.sessionId,
     userId: opts.userId,
-    metadata: { ...opts.metadata, traceName },
+    metadata: {
+      ...opts.metadata,
+      traceName,
+      llmBaseUrl: env.LLM_BASE_URL || "direct-openai",
+    },
     tags: opts.tags,
   });
 }

@@ -55,7 +55,6 @@ services:
       - npm_public
     depends_on:
       - agent_postgres
-      - langfuse
     deploy:
       mode: replicated
       replicas: 1
@@ -69,7 +68,7 @@ services:
         order: start-first
 
   langfuse:
-    image: langfuse/langfuse:3
+    image: langfuse/langfuse:2
     environment:
       - PORT=3000
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-M3ub4nc0p0stgr3s}@agent_postgres:5432/langfuse
@@ -104,15 +103,23 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-multi_atendimento}
     volumes:
       - agent_postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-langfuse-db.sql:/docker-entrypoint-initdb.d/init-langfuse-db.sql:ro
+    command:
+      - "sh"
+      - "-c"
+      - |
+        docker-entrypoint.sh postgres &
+        PID=$$!
+        until pg_isready -U "$${POSTGRES_USER:-postgres}"; do sleep 1; done
+        psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-multi_atendimento}" -c "CREATE DATABASE langfuse;" || true
+        wait $$PID
     networks:
       - agent_network
       - npm_public
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-multi_atendimento}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     deploy:
       mode: replicated
       replicas: 1

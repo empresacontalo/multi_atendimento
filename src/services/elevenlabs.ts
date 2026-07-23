@@ -168,6 +168,7 @@ export async function gerarAudioElevenLabs(texto: string): Promise<Uint8Array> {
 }
 
 export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
+  // Comentário adicionado para forçar um novo commit e testar a atualização do servidor
   const provider = env.TTS_PROVIDER?.toLowerCase();
   if (provider === "gemini" || provider?.includes("gemini")) {
     logger.info("tts", "Gerando áudio via Gemini TTS...");

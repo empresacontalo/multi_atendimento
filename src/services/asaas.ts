@@ -65,7 +65,12 @@ export async function buscarOuCriarClienteAsaas(dados: {
         const data = (await resCpf.json()) as { data?: ClienteAsaas[] };
         if (data.data && data.data.length > 0 && data.data[0]?.id) {
           clienteExistente = data.data[0];
-          logger.info("asaas", "Cliente Asaas encontrado por CPF", { id: clienteExistente.id, nome: dados.nome });
+          logger.info("asaas", "Cliente Asaas encontrado por CPF", {
+            id: clienteExistente.id,
+            nome: clienteExistente.name,
+            cpfCnpjNoRegistro: clienteExistente.cpfCnpj ?? "(VAZIO/NULL)",
+            mobilePhone: clienteExistente.mobilePhone,
+          });
         }
       }
     } catch (e) {
@@ -92,10 +97,17 @@ export async function buscarOuCriarClienteAsaas(dados: {
     }
   }
 
-  // 3. Se o cliente foi encontrado e foi informado um CPF, garantir que o cadastro no Asaas está atualizado com o CPF!
+  // 3. Se o cliente foi encontrado e foi informado um CPF, SEMPRE forçar atualização via PUT
+  //    (a busca do Asaas pode retornar o cliente por CPF mas o campo cpfCnpj não estar realmente gravado no perfil,
+  //     causando rejeição em cobranças de cartão de crédito/débito)
   if (clienteExistente) {
-    if (cpfLimpo && clienteExistente.cpfCnpj !== cpfLimpo) {
+    if (cpfLimpo) {
       try {
+        logger.info("asaas", "Forçando PUT para garantir CPF no cadastro do cliente Asaas", {
+          id: clienteExistente.id,
+          cpfCnpjAtual: clienteExistente.cpfCnpj,
+          cpfNovo: cpfLimpo,
+        });
         const updateRes = await fetchComTimeout(`${ASAAS_BASE_URL}/customers/${clienteExistente.id}`, {
           method: "PUT",
           headers: getHeaders(),
@@ -107,7 +119,7 @@ export async function buscarOuCriarClienteAsaas(dados: {
         });
         if (updateRes.ok) {
           const clienteAtualizado = (await updateRes.json()) as ClienteAsaas;
-          logger.info("asaas", "CPF do cliente Asaas atualizado com sucesso", { id: clienteAtualizado.id, cpfCnpj: cpfLimpo });
+          logger.info("asaas", "CPF do cliente Asaas atualizado/confirmado com sucesso", { id: clienteAtualizado.id, cpfCnpj: clienteAtualizado.cpfCnpj });
           return clienteAtualizado;
         } else {
           const errTxt = await updateRes.text();

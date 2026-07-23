@@ -50,58 +50,84 @@ export async function buscarOuCriarClienteAsaas(dados: {
   if (phoneDigits.startsWith("55") && (phoneDigits.length === 12 || phoneDigits.length === 13)) {
     phoneDigits = phoneDigits.slice(2);
   }
+  const cpfLimpo = dados.cpfCnpj ? dados.cpfCnpj.replace(/\D/g, "") : undefined;
 
-  try {
-    const searchUrl = `${ASAAS_BASE_URL}/customers?mobilePhone=${encodeURIComponent(phoneDigits)}` +
-      (dados.cpfCnpj ? `&cpfCnpj=${encodeURIComponent(dados.cpfCnpj.replace(/\D/g, ""))}` : "");
+  let clienteExistente: ClienteAsaas | null = null;
 
-    const res = await fetchComTimeout(searchUrl, {
-      method: "GET",
-      headers: getHeaders(),
-    });
-
-    if (res.ok) {
-      const data = await res.json() as { data?: ClienteAsaas[] };
-      if (data.data && data.data.length > 0 && data.data[0]?.id) {
-        const clienteExistente = data.data[0];
-        logger.info("asaas", "Cliente Asaas encontrado", { id: clienteExistente.id, nome: dados.nome });
-
-        // Se CPF foi fornecido e o cliente existente no Asaas não possui CPF ou precisa atualizar
-        if (dados.cpfCnpj) {
-          const cpfLimpo = dados.cpfCnpj.replace(/\D/g, "");
-          if (clienteExistente.cpfCnpj !== cpfLimpo) {
-            try {
-              const updateRes = await fetchComTimeout(`${ASAAS_BASE_URL}/customers/${clienteExistente.id}`, {
-                method: "PUT",
-                headers: getHeaders(),
-                body: JSON.stringify({
-                  cpfCnpj: cpfLimpo,
-                }),
-              });
-              if (updateRes.ok) {
-                const clienteAtualizado = await updateRes.json() as ClienteAsaas;
-                logger.info("asaas", "CPF do cliente Asaas atualizado com sucesso", { id: clienteAtualizado.id, cpfCnpj: cpfLimpo });
-                return clienteAtualizado;
-              }
-            } catch (errUpd) {
-              logger.warn("asaas", "Erro ao atualizar CPF do cliente no Asaas", errUpd);
-            }
-          }
+  // 1. Tentar buscar por CPF/CNPJ primeiro se informado
+  if (cpfLimpo) {
+    try {
+      const resCpf = await fetchComTimeout(`${ASAAS_BASE_URL}/customers?cpfCnpj=${encodeURIComponent(cpfLimpo)}`, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+      if (resCpf.ok) {
+        const data = (await resCpf.json()) as { data?: ClienteAsaas[] };
+        if (data.data && data.data.length > 0 && data.data[0]?.id) {
+          clienteExistente = data.data[0];
+          logger.info("asaas", "Cliente Asaas encontrado por CPF", { id: clienteExistente.id, nome: dados.nome });
         }
-        return clienteExistente;
       }
+    } catch (e) {
+      logger.warn("asaas", "Erro ao buscar cliente por CPF no Asaas:", e);
     }
-  } catch (err) {
-    logger.warn("asaas", "Erro ao buscar cliente no Asaas, tentando criar", err);
   }
 
+  // 2. Se não encontrou por CPF, buscar por telefone
+  if (!clienteExistente && phoneDigits) {
+    try {
+      const resPhone = await fetchComTimeout(`${ASAAS_BASE_URL}/customers?mobilePhone=${encodeURIComponent(phoneDigits)}`, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+      if (resPhone.ok) {
+        const data = (await resPhone.json()) as { data?: ClienteAsaas[] };
+        if (data.data && data.data.length > 0 && data.data[0]?.id) {
+          clienteExistente = data.data[0];
+          logger.info("asaas", "Cliente Asaas encontrado por telefone", { id: clienteExistente.id, nome: dados.nome });
+        }
+      }
+    } catch (e) {
+      logger.warn("asaas", "Erro ao buscar cliente por telefone no Asaas:", e);
+    }
+  }
+
+  // 3. Se o cliente foi encontrado e foi informado um CPF, garantir que o cadastro no Asaas está atualizado com o CPF!
+  if (clienteExistente) {
+    if (cpfLimpo && clienteExistente.cpfCnpj !== cpfLimpo) {
+      try {
+        const updateRes = await fetchComTimeout(`${ASAAS_BASE_URL}/customers/${clienteExistente.id}`, {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify({
+            name: clienteExistente.name || dados.nome,
+            cpfCnpj: cpfLimpo,
+            mobilePhone: phoneDigits || clienteExistente.mobilePhone,
+          }),
+        });
+        if (updateRes.ok) {
+          const clienteAtualizado = (await updateRes.json()) as ClienteAsaas;
+          logger.info("asaas", "CPF do cliente Asaas atualizado com sucesso", { id: clienteAtualizado.id, cpfCnpj: cpfLimpo });
+          return clienteAtualizado;
+        } else {
+          const errTxt = await updateRes.text();
+          logger.warn("asaas", `Falha ao atualizar CPF no Asaas (${updateRes.status}): ${errTxt}`);
+        }
+      } catch (errUpd) {
+        logger.warn("asaas", "Erro ao atualizar CPF do cliente no Asaas", errUpd);
+      }
+    }
+    return clienteExistente;
+  }
+
+  // 4. Se não existe por CPF nem por telefone, criar novo cliente no Asaas
   const createRes = await fetchComTimeout(`${ASAAS_BASE_URL}/customers`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
       name: dados.nome,
       mobilePhone: phoneDigits,
-      cpfCnpj: dados.cpfCnpj ? dados.cpfCnpj.replace(/\D/g, "") : undefined,
+      cpfCnpj: cpfLimpo,
       notificationDisabled: true,
     }),
   });
@@ -112,8 +138,8 @@ export async function buscarOuCriarClienteAsaas(dados: {
     throw new Error(`Erro ao criar cliente no Asaas (${createRes.status}): ${errBody}`);
   }
 
-  const cliente = await createRes.json() as ClienteAsaas;
-  logger.info("asaas", "Cliente Asaas criado com sucesso", { id: cliente.id });
+  const cliente = (await createRes.json()) as ClienteAsaas;
+  logger.info("asaas", "Cliente Asaas criado com sucesso", { id: cliente.id, cpfCnpj: cpfLimpo });
   return cliente;
 }
 
@@ -148,7 +174,7 @@ export async function criarCobrancaAsaas(dados: {
     throw new Error(`Erro ao criar cobrança no Asaas (${res.status}): ${errText}`);
   }
 
-  const cobranca = await res.json() as CobrancaAsaas;
+  const cobranca = (await res.json()) as CobrancaAsaas;
   logger.info("asaas", "Cobrança Asaas criada com sucesso", { id: cobranca.id, status: cobranca.status, invoiceUrl: cobranca.invoiceUrl });
   return cobranca;
 }
@@ -165,7 +191,7 @@ export async function obterQrCodePixAsaas(paymentId: string): Promise<QrCodePixA
     throw new Error(`Erro ao obter QR Code PIX (${res.status}): ${errText}`);
   }
 
-  const qrData = await res.json() as QrCodePixAsaas;
+  const qrData = (await res.json()) as QrCodePixAsaas;
   return qrData;
 }
 
@@ -181,6 +207,6 @@ export async function consultarCobrancaAsaas(paymentId: string): Promise<Cobranc
     throw new Error(`Erro ao consultar cobrança no Asaas (${res.status}): ${errText}`);
   }
 
-  const cobranca = await res.json() as CobrancaAsaas;
+  const cobranca = (await res.json()) as CobrancaAsaas;
   return cobranca;
 }

@@ -12,6 +12,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-langchain}
       - OPENAI_MODEL_MINI=${OPENAI_MODEL_MINI:-langchain}
+      # Transcrição de áudio: aceita 'groq', 'deepgram', 'groq/whisper-large-v3' ou 'deepgram/whisper-large' (possui fallback automático entre os dois)
       - OPENAI_MODEL_WHISPER=${OPENAI_MODEL_WHISPER:-groq/whisper-large-v3}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_API_KEY=${LLM_API_KEY}

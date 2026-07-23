@@ -72,7 +72,7 @@ services:
     environment:
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-M3ub4nc0p0stgr3s}@agent_postgres:5432/langfuse
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-M3ub4nc0p0stgr3s}@agent_postgres:5432/langfuse?schema=public&connection_limit=10&pool_timeout=30
       - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:-langfuse_secret_key_32_characters_min}
       - SALT=${LANGFUSE_SALT:-langfuse_salt_key_32_characters_min_len}
       - ENCRYPTION_KEY=${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
@@ -121,7 +121,7 @@ services:
       - "sh"
       - "-c"
       - |
-        docker-entrypoint.sh postgres &
+        docker-entrypoint.sh postgres -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=5 &
         PID=$$!
         until pg_isready -U "$${POSTGRES_USER:-postgres}"; do sleep 1; done
         psql -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-multi_atendimento}" -c "CREATE DATABASE langfuse;" || true

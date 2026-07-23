@@ -54,7 +54,7 @@ export const env = {
 
   TTS_PROVIDER: process.env["TTS_PROVIDER"] ?? "elevenlabs",
   DEEPGRAM_VOICE: process.env["DEEPGRAM_VOICE"] ?? "deepgram/aura-stella-en",
-  KOKORO_BASE_URL: process.env["KOKORO_BASE_URL"] || "http://172.17.0.1:8880",
+  KOKORO_BASE_URL: process.env["KOKORO_BASE_URL"] || "http://kokoro_kokoro-api:8880",
   KOKORO_VOICE: process.env["KOKORO_VOICE"] || "pf_dora",
   KOKORO_SPEED: Number(process.env["KOKORO_SPEED"] ?? "1.3"),
 

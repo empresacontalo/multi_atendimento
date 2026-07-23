@@ -12,6 +12,7 @@ export async function gerarAudioKokoro(texto: string, voiceOverride?: string): P
     const candidateBases = Array.from(
       new Set([
         userBase,
+        "http://kokoro_kokoro-api:8880",
         "http://172.17.0.1:8880",
         "http://localhost:8880",
         "http://agente.digitalarea.online",

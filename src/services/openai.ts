@@ -3,6 +3,20 @@ import { fetchComTimeout } from "../lib/fetch-with-timeout.ts";
 import { comRetry } from "../lib/retry.ts";
 import { logger } from "../lib/logger.ts";
 
+function normalizarModeloWhisper(nomeRaw: string): string {
+  const n = (nomeRaw || "").trim().toLowerCase();
+  if (n === "groq" || n === "groq/whisper" || n === "groq/whisper-v3") {
+    return "groq/whisper-large-v3";
+  }
+  if (n === "deepgram" || n === "deepgram/whisper" || n === "dg") {
+    return "deepgram/whisper-large";
+  }
+  if (n === "openai" || n === "whisper-1") {
+    return "openai/whisper-1";
+  }
+  return nomeRaw.trim();
+}
+
 async function executarTranscricao(
   audioBuffer: ArrayBuffer,
   contentType: string,
@@ -86,12 +100,13 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
         fileName,
       });
 
-      const modeloPrincipal = env.OPENAI_MODEL_WHISPER;
+      // Resolver modelo principal a partir do .env / .yml (suporta apelidos como 'groq', 'deepgram', ou o nome completo)
+      const modeloPrincipal = normalizarModeloWhisper(env.OPENAI_MODEL_WHISPER || "groq/whisper-large-v3");
       const modeloFallback = modeloPrincipal.includes("groq")
         ? "deepgram/whisper-large"
         : "groq/whisper-large-v3";
 
-      // 2. Tentar modelo principal
+      // 2. Tentar modelo principal definido nas variáveis de ambiente
       try {
         const texto = await executarTranscricao(audioBuffer, contentType, fileName, modeloPrincipal);
         logger.info("openai", "Transcrição concluída com sucesso (modelo principal)", {

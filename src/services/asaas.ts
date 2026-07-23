@@ -158,21 +158,20 @@ export async function buscarOuCriarClienteAsaas(dados: {
 export async function criarCobrancaAsaas(dados: {
   customerId: string;
   valor: number;
-  formaPagamento: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" | "UNDEFINED";
+  formaPagamento: "PIX" | "UNDEFINED";
   descricao: string;
   externalReference: string;
 }): Promise<CobrancaAsaas> {
   const hoje = new Date();
   const dueDate = hoje.toISOString().split("T")[0];
 
-  // CREDIT_CARD e DEBIT_CARD no Asaas exigem dados do cartão (checkout transparente).
-  // Como não coletamos dados do cartão via WhatsApp, usamos UNDEFINED para gerar
-  // um link de checkout onde o cliente pode pagar com PIX, boleto ou cartão.
-  let billingTypeAsaas = dados.formaPagamento;
-  if (billingTypeAsaas === "CREDIT_CARD" || billingTypeAsaas === "DEBIT_CARD") {
-    logger.info("asaas", `Convertendo billingType "${billingTypeAsaas}" → "UNDEFINED" (link de checkout com todas as opções)`);
-    billingTypeAsaas = "UNDEFINED";
-  }
+  // PIX  → cobrança PIX direta
+  // UNDEFINED → link de checkout multi-forma (boleto, PIX, cartão)
+  //             As formas disponíveis dependem do que está habilitado na conta Asaas.
+  //             Para que cartão apareça no checkout, habilite-o no painel do Asaas.
+  const billingTypeAsaas = dados.formaPagamento;
+  logger.info("asaas", `Criando cobrança com billingType: "${billingTypeAsaas}"`);
+
 
   const body = {
     customer: dados.customerId,

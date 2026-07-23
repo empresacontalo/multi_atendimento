@@ -98,16 +98,17 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
         logger.error("tool:criar-cobranca-agendamento", "Erro ao listar eventos no calendário:", e);
       }
 
-      // Mapear forma de pagamento para o padrão ASAAS
-      // Nota: CREDIT_CARD e DEBIT_CARD serão convertidos para UNDEFINED no asaas.ts
-      // pois via WhatsApp não temos dados do cartão. O link de checkout gerado
-      // aceita PIX, boleto e cartão — o cliente escolhe na hora de pagar.
-      let billingType: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" = "PIX";
+      // Mapear forma de pagamento para o padrão Asaas:
+      // - PIX  → cobrança PIX direta
+      // - UNDEFINED → link de checkout multi-forma (boleto, PIX, cartão)
+      //               Via WhatsApp não coletamos dados do cartão, então qualquer
+      //               pagamento com cartão/débito usa o checkout do Asaas onde o
+      //               cliente escolhe e digita os dados. As formas exibidas dependem
+      //               do que está habilitado na conta Asaas (painel > Configurações > Formas de pagamento).
+      let billingType: "PIX" | "UNDEFINED" = "PIX";
       const fp = input.formaPagamento.toLowerCase().trim();
-      if (fp.includes("credito") || fp.includes("crédito")) {
-        billingType = "CREDIT_CARD";
-      } else if (fp.includes("debito") || fp.includes("débito")) {
-        billingType = "DEBIT_CARD";
+      if (fp.includes("credito") || fp.includes("crédito") || fp.includes("debito") || fp.includes("débito")) {
+        billingType = "UNDEFINED"; // checkout multi-forma com cartão disponível
       }
 
       // Tentar resolver CPF se não foi passado no input
@@ -118,13 +119,6 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
           cpfFinal = matchCpf[0];
           logger.info("tool:criar-cobranca-agendamento", "CPF extraído automaticamente da descrição/título:", cpfFinal);
         }
-      }
-
-      // Validação: Para Cartão de Crédito ou Débito, CPF é obrigatório no Asaas
-      if ((billingType === "CREDIT_CARD" || billingType === "DEBIT_CARD") && !cpfFinal) {
-        return JSON.stringify({
-          erro: "CPF OBRIGATÓRIO PARA PAGAMENTO COM CARTÃO DE CRÉDITO OU DÉBITO. O parâmetro 'cpf' não foi fornecido. Se o cliente já disse o CPF na conversa, extraia os números do CPF e chame esta ferramenta novamente passando o parâmetro 'cpf'. Caso contrário, pergunte o CPF ao cliente para gerar a cobrança no cartão.",
-        });
       }
 
       // 1. Criar Evento no Google Calendar imediatamente com "Confirmaçao_Finaceira: Não confirmada"
@@ -261,7 +255,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
             resultado: "COBRANCA_E_AGENDAMENTO_CRIADOS",
             id_evento: eventoCriado?.id,
             confirmacao_financeira: "Não confirmada",
-            forma_pagamento: billingType === "CREDIT_CARD" ? "Crédito" : "Débito",
+            forma_pagamento: billingType === "PIX" ? "PIX" : (fp.includes("debito") || fp.includes("débito") ? "Débito" : "Crédito"),
             valor: "R$ 50,00",
             link_pagamento_enviado: linkEnviado,
             instrucoes:

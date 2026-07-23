@@ -187,17 +187,25 @@ export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
   } catch (err: any) {
     logger.warn(
       "tts",
-      "ElevenLabs falhou ou cota excedida. Usando fallback automático para Kokoro TTS (pf_dora / af_v0, velocidade 1.3)...",
+      "ElevenLabs falhou ou cota excedida. Tentando fallback para Google (Gemini) TTS...",
       err?.message || err,
     );
     try {
-      return await gerarAudioKokoro(texto);
-    } catch (kokoroErr: any) {
-      logger.warn("tts", "Kokoro TTS falhou. Tentando fallback para Gemini TTS...", kokoroErr?.message || kokoroErr);
+      return await gerarAudioGemini(texto);
+    } catch (geminiErr: any) {
+      logger.warn(
+        "tts",
+        "Google (Gemini) TTS falhou. Usando fallback para Kokoro TTS (pf_dora / af_v0, velocidade 1.3)...",
+        geminiErr?.message || geminiErr,
+      );
       try {
-        return await gerarAudioGemini(texto);
-      } catch (geminiErr: any) {
-        logger.error("tts", "Gemini TTS falhou. Tentando fallback emergencial para Deepgram TTS...", geminiErr?.message || geminiErr);
+        return await gerarAudioKokoro(texto);
+      } catch (kokoroErr: any) {
+        logger.error(
+          "tts",
+          "Kokoro TTS falhou. Tentando fallback emergencial para Deepgram TTS...",
+          kokoroErr?.message || kokoroErr,
+        );
         return await gerarAudioDeepgram(texto);
       }
     }

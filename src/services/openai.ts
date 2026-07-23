@@ -26,11 +26,24 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
       }
 
       const audioBuffer = await audioRes.arrayBuffer();
-      logger.info("openai", "Áudio baixado com sucesso", { tamanhoBytes: audioBuffer.byteLength });
+      const contentType = audioRes.headers.get("content-type") || "audio/ogg";
+      const fileName = contentType.includes("opus")
+        ? "audio.opus"
+        : contentType.includes("wav")
+        ? "audio.wav"
+        : contentType.includes("mp3") || contentType.includes("mpeg")
+        ? "audio.mp3"
+        : "audio.ogg";
+
+      logger.info("openai", "Áudio baixado com sucesso", {
+        tamanhoBytes: audioBuffer.byteLength,
+        contentType,
+        fileName,
+      });
 
       // 2. Enviar para Whisper / Speech-to-Text via LLM_BASE_URL (Omniroute ou OpenAI)
       const form = new FormData();
-      form.append("file", new Blob([audioBuffer], { type: "audio/ogg" }), "audio.ogg");
+      form.append("file", new Blob([audioBuffer], { type: contentType }), fileName);
       form.append("model", env.OPENAI_MODEL_WHISPER);
       form.append("language", "pt");
 
@@ -43,6 +56,7 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
       logger.info("openai", "Enviando áudio para API de transcrição...", {
         endpointUrl,
         model: env.OPENAI_MODEL_WHISPER,
+        fileName,
       });
 
       let res: Response;

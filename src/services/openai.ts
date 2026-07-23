@@ -17,7 +17,7 @@ function normalizarModeloWhisper(nomeRaw: string): string {
   return nomeRaw.trim();
 }
 
-async function executarTranscricao(
+async function executarTranscricaoCloud(
   audioBuffer: ArrayBuffer,
   contentType: string,
   fileName: string,
@@ -34,7 +34,7 @@ async function executarTranscricao(
 
   const apiKey = env.LLM_API_KEY || env.OPENAI_API_KEY;
 
-  logger.info("openai", "Enviando áudio para API de transcrição...", {
+  logger.info("openai", "Enviando áudio para API de transcrição (Cloud)...", {
     endpointUrl,
     model: modelo,
     fileName,
@@ -58,6 +58,43 @@ async function executarTranscricao(
   const texto = data.text?.trim() ?? "";
   if (!texto || data.noSpeechDetected) {
     throw new Error(`[openai] Modelo ${modelo} não detectou texto válido no áudio.`);
+  }
+  return texto;
+}
+
+async function executarTranscricaoLinto(
+  audioBuffer: ArrayBuffer,
+  contentType: string,
+  fileName: string,
+  lintoUrl: string
+): Promise<string> {
+  const form = new FormData();
+  form.append("file", new Blob([audioBuffer], { type: contentType }), fileName);
+  form.append("language", "pt");
+
+  const baseUrl = lintoUrl.replace(/\/+$/, "");
+  const endpointUrl = `${baseUrl}/transcribe`;
+
+  logger.info("openai", "Enviando áudio para serviço self-hosted LinTO STT...", {
+    endpointUrl,
+    fileName,
+  });
+
+  const res = await fetchComTimeout(endpointUrl, {
+    method: "POST",
+    body: form,
+    timeout: 30000,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`[linto-stt] Falha HTTP (${res.status}): ${text}`);
+  }
+
+  const data = (await res.json()) as { text?: string; transcript?: string; transcription?: string; result?: string };
+  const texto = (data.text || data.transcript || data.transcription || data.result || "").trim();
+  if (!texto) {
+    throw new Error(`[linto-stt] Nenhuma fala detectada no serviço LinTO.`);
   }
   return texto;
 }
@@ -100,7 +137,6 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
         fileName,
       });
 
-      // Resolver modelo principal a partir do .env / .yml (suporta apelidos como 'groq', 'deepgram', ou o nome completo)
       const modeloPrincipal = normalizarModeloWhisper(env.OPENAI_MODEL_WHISPER || "groq/whisper-large-v3");
       const modeloFallback = modeloPrincipal.includes("groq")
         ? "deepgram/whisper-large"
@@ -108,7 +144,7 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
 
       // 2. Tentar modelo principal definido nas variáveis de ambiente
       try {
-        const texto = await executarTranscricao(audioBuffer, contentType, fileName, modeloPrincipal);
+        const texto = await executarTranscricaoCloud(audioBuffer, contentType, fileName, modeloPrincipal);
         logger.info("openai", "Transcrição concluída com sucesso (modelo principal)", {
           model: modeloPrincipal,
           textoLen: texto.length,
@@ -119,20 +155,40 @@ export async function transcreverAudio(urlAudio: string): Promise<string> {
           erro: (primaryErr as Error).message,
         });
 
-        // 3. Fallback automático para o modelo secundário se o principal falhar ou não detectar fala
+        // 3. Fallback automático para o modelo secundário de nuvem
         try {
-          const textoFallback = await executarTranscricao(audioBuffer, contentType, fileName, modeloFallback);
-          logger.info("openai", "Transcrição concluída com sucesso via fallback", {
+          const textoFallback = await executarTranscricaoCloud(audioBuffer, contentType, fileName, modeloFallback);
+          logger.info("openai", "Transcrição concluída com sucesso via fallback cloud", {
             model: modeloFallback,
             textoLen: textoFallback.length,
           });
           return textoFallback;
         } catch (fallbackErr) {
-          logger.error("openai", "Ambos os modelos de transcrição falharam", {
+          logger.warn("openai", "Ambos os modelos de transcrição cloud falharam. Tentando serviço self-hosted LinTO STT...", {
             primaryErr: (primaryErr as Error).message,
             fallbackErr: (fallbackErr as Error).message,
           });
-          throw primaryErr;
+
+          // 4. Fallback final para o container self-hosted LinTO STT Whisper no Swarm
+          if (env.LINTO_WHISPER_URL) {
+            try {
+              const textoLinto = await executarTranscricaoLinto(audioBuffer, contentType, fileName, env.LINTO_WHISPER_URL);
+              logger.info("openai", "Transcrição concluída com sucesso via serviço LinTO STT self-hosted", {
+                lintoUrl: env.LINTO_WHISPER_URL,
+                textoLen: textoLinto.length,
+              });
+              return textoLinto;
+            } catch (lintoErr) {
+              logger.error("openai", "Todos os serviços de transcrição (Cloud e LinTO STT) falharam", {
+                primaryErr: (primaryErr as Error).message,
+                fallbackErr: (fallbackErr as Error).message,
+                lintoErr: (lintoErr as Error).message,
+              });
+              throw primaryErr;
+            }
+          } else {
+            throw primaryErr;
+          }
         }
       }
     },

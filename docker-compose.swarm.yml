@@ -12,8 +12,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-langchain}
       - OPENAI_MODEL_MINI=${OPENAI_MODEL_MINI:-langchain}
-      # Transcrição de áudio: aceita 'groq', 'deepgram', 'groq/whisper-large-v3' ou 'deepgram/whisper-large' (possui fallback automático entre os dois)
+      # Transcrição de áudio: aceita 'groq', 'deepgram', 'groq/whisper-large-v3' ou 'deepgram/whisper-large' (possui fallback automático entre os dois e para linto_whisper)
       - OPENAI_MODEL_WHISPER=${OPENAI_MODEL_WHISPER:-groq/whisper-large-v3}
+      - LINTO_WHISPER_URL=${LINTO_WHISPER_URL:-http://whisper_transcriber:80}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_API_KEY=${LLM_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
@@ -87,6 +88,24 @@ services:
         delay: 5s
         max_attempts: 3
 
+  whisper_transcriber:
+    image: lintoai/linto-stt-whisper:latest
+    environment:
+      - SERVICE_MODE=http
+      - MODEL=large-v3
+      - LANGUAGE=pt
+    volumes:
+      - whisper_models_cache:/root/.cache/whisper
+    networks:
+      - agent_network
+      - npm_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
   agent_postgres:
     image: postgres:16-alpine
     environment:
@@ -127,4 +146,6 @@ networks:
 
 volumes:
   agent_postgres_data:
+    driver: local
+  whisper_models_cache:
     driver: local

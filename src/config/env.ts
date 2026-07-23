@@ -36,6 +36,7 @@ export const env = {
   OPENAI_MODEL: process.env["OPENAI_MODEL"] ?? "gpt-5.2",
   OPENAI_MODEL_MINI: process.env["OPENAI_MODEL_MINI"] ?? "gpt-4.1-mini",
   OPENAI_MODEL_WHISPER: process.env["OPENAI_MODEL_WHISPER"] ?? "groq/whisper-large-v3",
+  LINTO_WHISPER_URL: process.env["LINTO_WHISPER_URL"] || "http://whisper_transcriber:80",
 
   LLM_BASE_URL: process.env["LLM_BASE_URL"] || process.env["OPENAI_BASE_URL"] || undefined,
   LLM_API_KEY: process.env["LLM_API_KEY"] || process.env["OPENAI_API_KEY"]!,

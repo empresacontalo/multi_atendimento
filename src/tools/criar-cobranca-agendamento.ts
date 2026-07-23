@@ -99,6 +99,9 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
       }
 
       // Mapear forma de pagamento para o padrão ASAAS
+      // Nota: CREDIT_CARD e DEBIT_CARD serão convertidos para UNDEFINED no asaas.ts
+      // pois via WhatsApp não temos dados do cartão. O link de checkout gerado
+      // aceita PIX, boleto e cartão — o cliente escolhe na hora de pagar.
       let billingType: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" = "PIX";
       const fp = input.formaPagamento.toLowerCase().trim();
       if (fp.includes("credito") || fp.includes("crédito")) {
@@ -246,7 +249,7 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
             link_pagamento: cobranca.invoiceUrl,
             instrucoes:
               `O agendamento foi realizado no calendário constando 'Confirmaçao_Finaceira: Não confirmada'. ` +
-              `Envie o link de pagamento (${cobranca.invoiceUrl}) para o cliente pagar a taxa com cartão de ${billingType === "CREDIT_CARD" ? "crédito" : "débito"}. ` +
+              `Envie o link de pagamento (${cobranca.invoiceUrl}) para o cliente. No link, ele poderá pagar com cartão de crédito, débito, PIX ou boleto. ` +
               `Informe que o valor de R$ 50,00 será abatido do valor total do serviço ao comparecer e diga ao cliente: 'Se possível, me confirme por aqui quando efetuar o pagamento para confirmar sua reserva de horário'.`,
           });
         }

@@ -158,16 +158,25 @@ export async function buscarOuCriarClienteAsaas(dados: {
 export async function criarCobrancaAsaas(dados: {
   customerId: string;
   valor: number;
-  formaPagamento: "PIX" | "CREDIT_CARD" | "DEBIT_CARD";
+  formaPagamento: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" | "UNDEFINED";
   descricao: string;
   externalReference: string;
 }): Promise<CobrancaAsaas> {
   const hoje = new Date();
   const dueDate = hoje.toISOString().split("T")[0];
 
+  // CREDIT_CARD e DEBIT_CARD no Asaas exigem dados do cartão (checkout transparente).
+  // Como não coletamos dados do cartão via WhatsApp, usamos UNDEFINED para gerar
+  // um link de checkout onde o cliente pode pagar com PIX, boleto ou cartão.
+  let billingTypeAsaas = dados.formaPagamento;
+  if (billingTypeAsaas === "CREDIT_CARD" || billingTypeAsaas === "DEBIT_CARD") {
+    logger.info("asaas", `Convertendo billingType "${billingTypeAsaas}" → "UNDEFINED" (link de checkout com todas as opções)`);
+    billingTypeAsaas = "UNDEFINED";
+  }
+
   const body = {
     customer: dados.customerId,
-    billingType: dados.formaPagamento,
+    billingType: billingTypeAsaas,
     value: dados.valor,
     dueDate,
     description: dados.descricao,
@@ -187,7 +196,7 @@ export async function criarCobrancaAsaas(dados: {
   }
 
   const cobranca = (await res.json()) as CobrancaAsaas;
-  logger.info("asaas", "Cobrança Asaas criada com sucesso", { id: cobranca.id, status: cobranca.status, invoiceUrl: cobranca.invoiceUrl });
+  logger.info("asaas", "Cobrança Asaas criada com sucesso", { id: cobranca.id, status: cobranca.status, billingType: billingTypeAsaas, invoiceUrl: cobranca.invoiceUrl });
   return cobranca;
 }
 

@@ -3,6 +3,68 @@ import { fetchComTimeout } from "../lib/fetch-with-timeout.ts";
 import { comRetry } from "../lib/retry.ts";
 import { logger } from "../lib/logger.ts";
 
+export async function gerarAudioKokoro(texto: string, voiceOverride?: string): Promise<Uint8Array> {
+  return comRetry(async () => {
+    const voice = voiceOverride || env.KOKORO_VOICE || "pf_dora";
+    const speed = env.KOKORO_SPEED || 1.3;
+    const userBase = (env.KOKORO_BASE_URL || "").replace(/\/+$/, "");
+
+    const candidateBases = Array.from(
+      new Set([
+        userBase,
+        "http://172.17.0.1:8880",
+        "http://localhost:8880",
+        "http://agente.digitalarea.online",
+      ].filter(Boolean))
+    );
+
+    const endpoints = candidateBases.flatMap((base) => [
+      `${base}/v1/audio/speech`,
+      `${base}/audio/speech`,
+    ]);
+
+    let lastErr: Error | null = null;
+
+    for (const endpointUrl of endpoints) {
+      try {
+        logger.info("kokoro", `Gerando áudio Kokoro TTS (voz: ${voice}, velocidade: ${speed})...`, { endpointUrl });
+        const res = await fetchComTimeout(endpointUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "kokoro",
+            input: texto,
+            voice,
+            response_format: "mp3",
+            speed,
+          }),
+          timeout: 20000,
+        });
+
+        if (res.ok) {
+          const buffer = await res.arrayBuffer();
+          return new Uint8Array(buffer);
+        }
+
+        const errText = await res.text();
+        lastErr = new Error(`[kokoro] HTTP ${res.status}: ${errText}`);
+      } catch (err: any) {
+        lastErr = err;
+      }
+    }
+
+    // Se a voz "pf_dora" falhar (ex: modelo de voz não encontrado), tentar voz de fallback "af_v0"
+    if (voice !== "af_v0") {
+      logger.warn("kokoro", `Voz Kokoro "${voice}" falhou. Tentando voz de fallback "af_v0"...`);
+      return gerarAudioKokoro(texto, "af_v0");
+    }
+
+    throw lastErr || new Error("[kokoro] Falha ao comunicar com o serviço Kokoro TTS");
+  });
+}
+
 export async function gerarAudioDeepgram(texto: string): Promise<Uint8Array> {
   return comRetry(async () => {
     const endpointUrl = env.LLM_BASE_URL
@@ -69,7 +131,12 @@ export async function gerarAudioElevenLabs(texto: string): Promise<Uint8Array> {
 }
 
 export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
-  if (env.TTS_PROVIDER?.toLowerCase() === "deepgram") {
+  const provider = env.TTS_PROVIDER?.toLowerCase();
+  if (provider === "kokoro") {
+    logger.info("tts", "Gerando áudio via Kokoro TTS...");
+    return gerarAudioKokoro(texto);
+  }
+  if (provider === "deepgram") {
     logger.info("tts", "Gerando áudio via Deepgram TTS...");
     return gerarAudioDeepgram(texto);
   }
@@ -79,9 +146,14 @@ export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
   } catch (err: any) {
     logger.warn(
       "tts",
-      "ElevenLabs falhou ou cota excedida. Usando fallback automático para Deepgram TTS...",
+      "ElevenLabs falhou ou cota excedida. Usando fallback automático para Kokoro TTS (pf_dora / af_v0, velocidade 1.3)...",
       err?.message || err,
     );
-    return await gerarAudioDeepgram(texto);
+    try {
+      return await gerarAudioKokoro(texto);
+    } catch (kokoroErr: any) {
+      logger.error("tts", "Kokoro TTS falhou. Tentando fallback emergencial para Deepgram TTS...", kokoroErr?.message || kokoroErr);
+      return await gerarAudioDeepgram(texto);
+    }
   }
 }

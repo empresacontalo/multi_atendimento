@@ -240,16 +240,36 @@ export function criarToolCriarCobrancaAgendamento(contexto: ContextoCriarCobranc
               "Diga obrigatoriamente ao cliente: 'Se possível, me confirme por aqui quando efetuar o pagamento para confirmar sua reserva de horário'.",
           });
         } else {
+          // Enviar link de pagamento como MENSAGEM DE TEXTO SEPARADA (sem tags HTML)
+          // para que o cliente possa clicar diretamente no WhatsApp e abrir no navegador
+          let linkEnviado = false;
+          if (cobranca.invoiceUrl) {
+            try {
+              await enviarMensagem(
+                contexto.idConta,
+                contexto.idConversa,
+                cobranca.invoiceUrl
+              );
+              linkEnviado = true;
+              logger.info("tool:criar-cobranca-agendamento", "Link de pagamento enviado como mensagem separada", { invoiceUrl: cobranca.invoiceUrl });
+            } catch (e) {
+              logger.error("tool:criar-cobranca-agendamento", "Erro ao enviar link de pagamento como mensagem:", e);
+            }
+          }
+
           return JSON.stringify({
             resultado: "COBRANCA_E_AGENDAMENTO_CRIADOS",
             id_evento: eventoCriado?.id,
             confirmacao_financeira: "Não confirmada",
             forma_pagamento: billingType === "CREDIT_CARD" ? "Crédito" : "Débito",
             valor: "R$ 50,00",
-            link_pagamento: cobranca.invoiceUrl,
+            link_pagamento_enviado: linkEnviado,
             instrucoes:
               `O agendamento foi realizado no calendário constando 'Confirmaçao_Finaceira: Não confirmada'. ` +
-              `Envie o link de pagamento (${cobranca.invoiceUrl}) para o cliente. No link, ele poderá pagar com cartão de crédito, débito, PIX ou boleto. ` +
+              `O link de pagamento já foi enviado como mensagem de texto separada no chat para o cliente clicar e pagar no navegador. ` +
+              `ATENÇÃO REGRA ABSOLUTA: NUNCA inclua o link/URL de pagamento no seu texto ou áudio de resposta! ` +
+              `Apenas informe o cliente de forma verbal/amigável que o link de pagamento foi enviado no chat para ele clicar e pagar. ` +
+              `No link, ele poderá pagar com cartão de crédito, débito, PIX ou boleto. ` +
               `Informe que o valor de R$ 50,00 será abatido do valor total do serviço ao comparecer e diga ao cliente: 'Se possível, me confirme por aqui quando efetuar o pagamento para confirmar sua reserva de horário'.`,
           });
         }

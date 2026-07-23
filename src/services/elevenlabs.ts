@@ -66,6 +66,42 @@ export async function gerarAudioKokoro(texto: string, voiceOverride?: string): P
   });
 }
 
+export async function gerarAudioGemini(texto: string, voiceOverride?: string): Promise<Uint8Array> {
+  return comRetry(async () => {
+    const endpointUrl = env.LLM_BASE_URL
+      ? `${env.LLM_BASE_URL.replace(/\/+$/, "")}/audio/speech`
+      : "https://api.openai.com/v1/audio/speech";
+
+    const apiKey = env.LLM_API_KEY || env.OPENAI_API_KEY;
+    const model = env.GEMINI_TTS_MODEL || "gemini/gemini-3.1-flash-tts-preview";
+    const voice = voiceOverride || env.GEMINI_TTS_VOICE || "nova";
+
+    logger.info("gemini-tts", `Gerando áudio via Gemini TTS (modelo: ${model}, voz feminina: ${voice})...`, { endpointUrl });
+
+    const res = await fetchComTimeout(endpointUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        input: texto,
+        voice,
+      }),
+      timeout: 60000,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`[gemini-tts] TTS falhou (${res.status}): ${errText}`);
+    }
+
+    const buffer = await res.arrayBuffer();
+    return new Uint8Array(buffer);
+  });
+}
+
 export async function gerarAudioDeepgram(texto: string): Promise<Uint8Array> {
   return comRetry(async () => {
     const endpointUrl = env.LLM_BASE_URL
@@ -133,6 +169,10 @@ export async function gerarAudioElevenLabs(texto: string): Promise<Uint8Array> {
 
 export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
   const provider = env.TTS_PROVIDER?.toLowerCase();
+  if (provider === "gemini" || provider?.includes("gemini")) {
+    logger.info("tts", "Gerando áudio via Gemini TTS...");
+    return gerarAudioGemini(texto);
+  }
   if (provider === "kokoro") {
     logger.info("tts", "Gerando áudio via Kokoro TTS...");
     return gerarAudioKokoro(texto);
@@ -153,8 +193,13 @@ export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
     try {
       return await gerarAudioKokoro(texto);
     } catch (kokoroErr: any) {
-      logger.error("tts", "Kokoro TTS falhou. Tentando fallback emergencial para Deepgram TTS...", kokoroErr?.message || kokoroErr);
-      return await gerarAudioDeepgram(texto);
+      logger.warn("tts", "Kokoro TTS falhou. Tentando fallback para Gemini TTS...", kokoroErr?.message || kokoroErr);
+      try {
+        return await gerarAudioGemini(texto);
+      } catch (geminiErr: any) {
+        logger.error("tts", "Gemini TTS falhou. Tentando fallback emergencial para Deepgram TTS...", geminiErr?.message || geminiErr);
+        return await gerarAudioDeepgram(texto);
+      }
     }
   }
 }

@@ -37,9 +37,11 @@ export async function gerarAudioOmnivoice(texto: string, voiceOverride?: string)
           body: JSON.stringify({
             model: "omnivoice",
             input: texto,
-            voice,
-            response_format: "mp3",
-            speed,
+            voice: "female",
+            response_format: "wav",
+            language_id: "pt",
+            num_step: 10,
+            guidance_scale: 1.3,
           }),
           timeout: 20000,
         });

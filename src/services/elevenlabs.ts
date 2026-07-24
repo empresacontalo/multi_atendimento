@@ -3,16 +3,16 @@ import { fetchComTimeout } from "../lib/fetch-with-timeout.ts";
 import { comRetry } from "../lib/retry.ts";
 import { logger } from "../lib/logger.ts";
 
-export async function gerarAudioKokoro(texto: string, voiceOverride?: string): Promise<Uint8Array> {
+export async function gerarAudioOmnivoice(texto: string, voiceOverride?: string): Promise<Uint8Array> {
   return comRetry(async () => {
-    const voice = voiceOverride || env.KOKORO_VOICE || "pf_dora";
-    const speed = env.KOKORO_SPEED || 1.3;
-    const userBase = (env.KOKORO_BASE_URL || "").replace(/\/+$/, "");
+    const voice = voiceOverride || env.OMNIVOICE_VOICE || "pf_dora";
+    const speed = env.OMNIVOICE_SPEED || 1.3;
+    const userBase = (env.OMNIVOICE_BASE_URL || "").replace(/\/+$/, "");
 
     const candidateBases = Array.from(
       new Set([
         userBase,
-        "http://kokoro_kokoro-api:8880",
+        "http://omnivoice_omnivoice:8880",
         "http://172.17.0.1:8880",
         "http://localhost:8880",
         "http://agente.digitalarea.online",
@@ -28,14 +28,14 @@ export async function gerarAudioKokoro(texto: string, voiceOverride?: string): P
 
     for (const endpointUrl of endpoints) {
       try {
-        logger.info("kokoro", `Gerando áudio Kokoro TTS (voz: ${voice}, velocidade: ${speed})...`, { endpointUrl });
+        logger.info("omnivoice", `Gerando áudio Omnivoice TTS (voz: ${voice}, velocidade: ${speed})...`, { endpointUrl });
         const res = await fetchComTimeout(endpointUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "kokoro",
+            model: "omnivoice",
             input: texto,
             voice,
             response_format: "mp3",
@@ -50,7 +50,7 @@ export async function gerarAudioKokoro(texto: string, voiceOverride?: string): P
         }
 
         const errText = await res.text();
-        lastErr = new Error(`[kokoro] HTTP ${res.status}: ${errText}`);
+        lastErr = new Error(`[omnivoice] HTTP ${res.status}: ${errText}`);
       } catch (err: any) {
         lastErr = err;
       }
@@ -58,11 +58,11 @@ export async function gerarAudioKokoro(texto: string, voiceOverride?: string): P
 
     // Se a voz "pf_dora" falhar (ex: modelo de voz não encontrado), tentar voz de fallback "af_v0"
     if (voice !== "af_v0") {
-      logger.warn("kokoro", `Voz Kokoro "${voice}" falhou. Tentando voz de fallback "af_v0"...`);
-      return gerarAudioKokoro(texto, "af_v0");
+      logger.warn("omnivoice", `Voz Omnivoice "${voice}" falhou. Tentando voz de fallback "af_v0"...`);
+      return gerarAudioOmnivoice(texto, "af_v0");
     }
 
-    throw lastErr || new Error("[kokoro] Falha ao comunicar com o serviço Kokoro TTS");
+    throw lastErr || new Error("[omnivoice] Falha ao comunicar com o serviço Omnivoice TTS");
   });
 }
 
@@ -174,9 +174,9 @@ export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
     logger.info("tts", "Gerando áudio via Gemini TTS...");
     return gerarAudioGemini(texto);
   }
-  if (provider === "kokoro") {
-    logger.info("tts", "Gerando áudio via Kokoro TTS...");
-    return gerarAudioKokoro(texto);
+  if (provider === "omnivoice") {
+    logger.info("tts", "Gerando áudio via Omnivoice TTS...");
+    return gerarAudioOmnivoice(texto);
   }
   if (provider === "deepgram") {
     logger.info("tts", "Gerando áudio via Deepgram TTS...");
@@ -196,16 +196,16 @@ export async function gerarAudioTts(texto: string): Promise<Uint8Array> {
     } catch (geminiErr: any) {
       logger.warn(
         "tts",
-        "Google (Gemini) TTS falhou. Usando fallback para Kokoro TTS (pf_dora / af_v0, velocidade 1.3)...",
+        "Google (Gemini) TTS falhou. Usando fallback para Omnivoice TTS (pf_dora / af_v0, velocidade 1.3)...",
         geminiErr?.message || geminiErr,
       );
       try {
-        return await gerarAudioKokoro(texto);
-      } catch (kokoroErr: any) {
+        return await gerarAudioOmnivoice(texto);
+      } catch (omnivoiceErr: any) {
         logger.error(
           "tts",
-          "Kokoro TTS falhou. Tentando fallback emergencial para Deepgram TTS...",
-          kokoroErr?.message || kokoroErr,
+          "Omnivoice TTS falhou. Tentando fallback emergencial para Deepgram TTS...",
+          omnivoiceErr?.message || omnivoiceErr,
         );
         return await gerarAudioDeepgram(texto);
       }
